@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+*.env
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+temp_req_*
+.vite/
+*.mp3
+*.wav
+*_pid.txt

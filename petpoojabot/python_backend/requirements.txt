@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+python-dotenv
+openai
+pandas
+scikit-learn
+sentence-transformers
+faiss-cpu
+pyaudio
+google-cloud-translate
+psycopg2-binary
+sqlalchemy

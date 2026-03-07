@@ -1,0 +1,10 @@
+{
+  "name": "chaoticers",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "vite": "^7.3.1"
+  }
+}
