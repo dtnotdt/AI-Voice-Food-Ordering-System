@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, Menu as MenuIcon, ChevronRight } from 'lucide-react';
+import { Mic, Menu as MenuIcon, ChevronRight, PhoneCall } from 'lucide-react';
+import VoiceCallInterface from '../components/VoiceCallInterface';
 
 const Landing = () => {
     const [showModal, setShowModal] = useState(false);
+    const [isCalling, setIsCalling] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -16,7 +18,7 @@ const Landing = () => {
     const foodImages = [
         "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&q=80&w=800",
         "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&q=80&w=800",
-        "https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&q=80&w=800"
+        "https://images.unsplash.com/photo-1562376552-0d160a2f148c?auto=format&fit=crop&q=80&w=800"
     ];
 
     return (
@@ -144,10 +146,32 @@ const Landing = () => {
                                     <p className="text-sm text-gray-600">Browse AI recommended combinations</p>
                                 </div>
                             </button>
+
+                            <div className="flex items-center gap-4 my-2">
+                                <div className="h-[1px] flex-1 bg-gray-100"></div>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">New Experience</span>
+                                <div className="h-[1px] flex-1 bg-gray-100"></div>
+                            </div>
+
+                            <button
+                                onClick={() => setIsCalling(true)}
+                                className="group relative flex items-center p-6 bg-gradient-to-r from-zinc-900 to-zinc-800 hover:from-black hover:to-zinc-900 border border-zinc-700 rounded-2xl transition-all duration-300 overflow-hidden"
+                            >
+                                <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+                                <div className="bg-orange-500 text-white p-4 rounded-full mr-4 shadow-lg group-hover:animate-bounce">
+                                    <PhoneCall size={28} />
+                                </div>
+                                <div className="text-left z-10">
+                                    <h3 className="text-xl font-bold text-white">Call Restaurant</h3>
+                                    <p className="text-sm text-zinc-400">Speak live with our AI Agent</p>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {isCalling && <VoiceCallInterface onClose={() => setIsCalling(false)} />}
         </div>
     );
 };

@@ -10,6 +10,7 @@ import OrderTracking from './pages/OrderTracking';
 import GlobalVoiceBot from './components/GlobalVoiceBot';
 import Address from './pages/Address';
 import AdminAuth from './pages/AdminAuth';
+import AuthGate from './components/AuthGate';
 
 function App() {
   return (
@@ -17,13 +18,13 @@ function App() {
       <div className="min-h-screen bg-gray-50 text-gray-900 font-sans relative">
         <GlobalVoiceBot />
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/voice" element={<VoiceOrdering />} />
-          <Route path="/menu" element={<SmartMenu />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/address" element={<Address />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/tracking" element={<OrderTracking />} />
+          <Route path="/" element={<AuthGate><Landing /></AuthGate>} />
+          <Route path="/voice" element={<AuthGate><VoiceOrdering /></AuthGate>} />
+          <Route path="/menu" element={<AuthGate><SmartMenu /></AuthGate>} />
+          <Route path="/cart" element={<AuthGate><Cart /></AuthGate>} />
+          <Route path="/address" element={<AuthGate><Address /></AuthGate>} />
+          <Route path="/payment" element={<AuthGate><Payment /></AuthGate>} />
+          <Route path="/tracking" element={<AuthGate><OrderTracking /></AuthGate>} />
           <Route path="/admin" element={<AdminAuth />} />
         </Routes>
       </div>

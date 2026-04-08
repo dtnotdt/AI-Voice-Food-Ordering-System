@@ -50,6 +50,76 @@ TRANSLITERATION_MAP = {
         "hi": ["आइस्ड टी", "आइस टी", "ठंडी चाय"],
         "gu": ["આઈસ્ડ ટી", "આઈસ ટી", "ઠંડી ચા"],
     },
+    # ── Indian Menu Items (critical for the bot to work) ──────────────────
+    "Misal Pav": {
+        "hi": ["मिसल पाव", "मिसळ पाव", "मिसाल पाव", "मिसल पव", "मिसाल पव"],
+        "gu": ["મિસળ પાવ", "મિસળ પવ", "મિસળ", "મિસ઼ળ"],
+        "mr": ["मिसळ पाव", "मिसळ"],
+    },
+    "Vada Pav": {
+        "hi": ["वड़ा पाव", "वड़ापाव", "वडा पाव", "बटाटा वड़ा"],
+        "gu": ["વડા પાઉં", "વડા પાવ", "વડા", "વળ"],
+        "mr": ["वडा पाव", "वडापाव"],
+    },
+    "Pav Bhaji": {
+        "hi": ["पाव भाजी", "पाव भाजि", "पाव भाज़ी"],
+        "gu": ["પાઉં ભાજી", "પવ ભાજી", "પાઉ ભાજી"],
+        "mr": ["पाव भाजी"],
+    },
+    "Masala Fries": {
+        "hi": ["मसाला फ्राइज", "मसाला फ्रेंच फ्राइज", "मसाले वाले फ्राइज"],
+        "gu": ["મસાલા ફ્રાઈઝ", "મસાલા ફ્રાઈ"],
+    },
+    "Samosa": {
+        "hi": ["समोसा", "समोसे"],
+        "gu": ["સમોસા", "સમોસો"],
+    },
+    "Dosa": {
+        "hi": ["डोसा", "दोसा"],
+        "gu": ["ઢોસા", "ઢોશા"],
+        "ta": ["தோசை", "டோசை"],
+    },
+    "Idli": {
+        "hi": ["इडली", "इडली"],
+        "ta": ["இட்லி"],
+        "ml": ["ഇഡ്ലി"],
+    },
+    "Chai": {
+        "hi": ["चाय", "चाई", "चहा"],
+        "gu": ["ચા", "ચ"],
+        "mr": ["चहा"],
+    },
+    "Lassi": {
+        "hi": ["लस्सी", "लसी"],
+        "gu": ["લસ્સી", "છાસ"],
+    },
+    "Biryani": {
+        "hi": ["बिरयानी", "बिरयानि", "बिर्यानी"],
+        "gu": ["બિરયાની", "બિરિયાની"],
+        "ta": ["பிரியாணி"],
+        "ar": ["برياني", "بريانى"],
+    },
+    "Paneer Tikka": {
+        "hi": ["पनीर टिक्का", "पनीर टिक्का"],
+        "gu": ["પનીર ટિક્કા", "પનીર ટીકા"],
+    },
+    "Butter Chicken": {
+        "hi": ["बटर चिकन", "मक्खन मुर्ग", "बट्टर चिकन"],
+        "gu": ["બટર ચિકન"],
+    },
+    "Shawarma": {
+        "hi": ["शावरमा", "शावर्मा"],
+        "ar": ["شاورما", "شاورمة"],
+    },
+    "Naan": {
+        "hi": ["नान", "नाँ"],
+        "gu": ["નાન"],
+    },
+    "Roti": {
+        "hi": ["रोटी", "चपाती", "फुल्का"],
+        "gu": ["રોટી", "ચપાટી"],
+        "mr": ["पोळी"],
+    },
 }
 
 # ── Whisper error patterns & phonetic variants per item ────────────────────
@@ -58,47 +128,122 @@ WHISPER_VARIANTS = {
     "Veg Burger": [
         "veg burgr", "veg burgar", "veg berger", "veg buger", "veg burgerr",
         "veg borgr", "vegburger", "veg burger", "vej burger", "veg brgr",
-        "veggie burger", "veg burge", "vege burger",
+        "veggie burger", "veg burge", "vege burger", "vage burger", 
+        "veg bugar", "wage burger", "vez burger"
     ],
     "Paneer Pizza": [
         "paneer piza", "paneer pizaa", "paner pizza", "paner piza",
         "panir pizza", "paneer pizzaa", "pneer pizza", "paneer pissa",
-        "paneer peeza", "panir piza", "panner pizza",
+        "paneer peeza", "panir piza", "panner pizza", "pnir pizza",
+        "panneer pizza", "panneer piza", "pannir pizza"
     ],
     "Peri Peri Fries": [
         "peri fries", "peri fry", "peri peri fry", "perri perri fries",
         "peri peri french fries", "peri peri fraiz", "peri peri frise",
         "peri potato fries", "peri peri frays", "peri peri frye",
         "perry perry fries", "peri peri fris", "pp fries", "periperi fries",
-        "peri peri freis", "perri fries",
+        "peri peri freis", "perri fries", "piri piri fries", "piri fries"
     ],
     "Fries": [
         "fry", "french fries", "freis", "friez", "friess", "fraiz",
-        "frise", "fryes", "french fry", "fraz",
+        "frise", "fryes", "french fry", "fraz", "aloo fries", "potato fries",
+        "frais", "frys"
     ],
     "Coke": [
         "coca cola", "coca-cola", "cocacola", "kok", "cok", "coek",
-        "koke", "coak", "cock",
+        "koke", "coak", "cock", "coka", "coco cola", "cola"
     ],
     "Garlic Bread": [
         "garlic bred", "garlik bread", "garlic brad", "garlick bread",
         "garlic breads", "garlic braid", "garlicbread", "garlic bre",
+        "garlic breadstick", "lahsun bread", "lasun bread"
     ],
     "Pepsi": [
-        "pepsie", "pepci", "pepsy", "pepzie", "pepsee",
+        "pepsie", "pepci", "pepsy", "pepzie", "pepsee", "pepsii"
     ],
     "Cold Coffee": [
         "cold cofee", "cold coffe", "cold coffie", "cold coffey",
         "cold cofie", "colld coffee", "cold cafe", "iced coffee",
-        "cold koffee", "cold kofi",
+        "cold koffee", "cold kofi", "cold kaffee", "thandi coffee"
     ],
     "Veg Wrap": [
         "veg rap", "veg warp", "veg raap", "veg rap", "vegwrap",
-        "vej wrap", "veg wraps", "veg raps",
+        "vej wrap", "veg wraps", "veg raps", "veggie wrap",
+        "vej rap", "vez wrap"
     ],
     "Iced Tea": [
         "ice tea", "iced tee", "iced teaa", "icetea", "ice tee",
-        "iced t", "iced tii",
+        "iced t", "iced tii", "icete", "aice tea", "thandi chai"
+    ],
+    # ── Indian Items ────────────────────────────
+    "Misal Pav": [
+        "misal pav", "misel pav", "misal paw", "missal pav", "misal paw",
+        "misaal pav", "misal pa", "misalpav", "misal", "misel", "misal paav",
+        "misal pa", "missal", "missal pa", "misal bhaji", "missal pav",
+        "misal pbhaji", "misal pao", "misel paav", "misal paaw", "missal pa",
+        "mis pav", "misal pov", "missel pav", "misal paav", "misal pao",
+        # Romanized Marathi/Hindi variants
+        "misal paav", "misal paaw", "mishall pav", "mishal pav"
+    ],
+    "Vada Pav": [
+        "vada pav", "wada pav", "vada pa", "wada pa", "vada pao", "wada pao",
+        "batata vada", "batata wada", "vad pav", "vadapav", "wadapav",
+        "wada paw", "vada paw", "vada pa", "bata vada", "potato pav",
+        "potato fritter bun", "vada pao", "wada pao"
+    ],
+    "Pav Bhaji": [
+        "pav bhaji", "pao bhaji", "pav bhaji", "pav baji", "pao baji",
+        "pav bhajee", "pav bajee", "pav bhaji", "pav bhajji",
+        "pao bhajji", "pav bhaaji", "pavbhaji", "paobhaji",
+        "pav bhazhi", "pav bhage"
+    ],
+    "Masala Fries": [
+        "masala fries", "masala freis", "masala frys", "masala fry",
+        "masala french fries", "masala fraiz", "masala frise",
+        "masala potato fries", "masala chips", "spicy fries",
+        "masala friz", "masaala fries"
+    ],
+    "Samosa": [
+        "samosa", "samoosa", "samosaa", "samousa", "samoza", "saamosaa",
+        "samose", "singleton", "singada", "singara"
+    ],
+    "Dosa": [
+        "dosa", "dosai", "dosha", "dossa", "dose", "dhosa", "thosai",
+        "tosai", "plain dosa", "masala dosa", "rava dosa"
+    ],
+    "Idli": [
+        "idli", "idle", "idly", "idlee", "iddly", "iddli", "idlii"
+    ],
+    "Chai": [
+        "chai", "chay", "tea", "chais", "indian tea", "masala chai", "masala tea"
+    ],
+    "Lassi": [
+        "lassi", "lassie", "laasi", "lassee", "lasi", "lasee", 
+        "mango lassi", "sweet lassi", "salted lassi"
+    ],
+    "Biryani": [
+        "biryani", "biriyani", "biryaani", "briyani", "beriani",
+        "bryani", "beryani", "biriani", "biryaani", "biryani rice"
+    ],
+    "Paneer Tikka": [
+        "paneer tikka", "panir tikka", "paner tikka", "paneer tika",
+        "paneer tikaa", "pneer tikka", "paneer teka", "paneer chilli"
+    ],
+    "Butter Chicken": [
+        "butter chicken", "butter chiken", "butter chikin", "murgh makhani",
+        "makhani chicken", "butter chicken curry", "buttr chicken",
+        "butter chick"
+    ],
+    "Shawarma": [
+        "shawarma", "shawurma", "shwarma", "shawerma", "shawrma",
+        "shawarma wrap", "chicken shawarma", "veg shawarma"
+    ],
+    "Naan": [
+        "naan", "nan", "garlic naan", "butter naan", "na", "naaan"
+    ],
+    "Roti": [
+        "roti", "chapati", "chapati", "phulka", "fulka", "rotis",
+        "whole wheat roti", "plain roti"
     ],
 }
 

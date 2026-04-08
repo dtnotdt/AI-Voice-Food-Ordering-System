@@ -56,34 +56,51 @@ class SmartMatcher:
         # Step 2: Exact alias lookup
         result = self._try_exact(cleaned)
         if not result:
-            # Also try the normalized-but-uncleaned version 
-            # (in case filler removal was too aggressive)
             result = self._try_exact(normalized_input)
         if result:
             result['cleaned_input'] = cleaned
             result['raw_input'] = raw_input
+            result['needs_clarification'] = False
             return result
         
         # Step 3: Fuzzy matching
-        result = self._try_fuzzy(cleaned)
-        if not result:
-            result = self._try_fuzzy(normalized_input)
-        if result:
-            result['cleaned_input'] = cleaned
-            result['raw_input'] = raw_input
-            return result
+        results = self._try_fuzzy(cleaned)
+        if not results:
+            results = self._try_fuzzy(normalized_input)
+        if results:
+            return self._evaluate_ambiguity(results, raw_input, cleaned)
         
         # Step 4: FAISS semantic fallback
-        result = self._try_semantic(cleaned)
-        if not result:
-            result = self._try_semantic(normalized_input)
-        if result:
-            result['cleaned_input'] = cleaned
-            result['raw_input'] = raw_input
-            return result
+        results = self._try_semantic(cleaned)
+        if not results:
+            results = self._try_semantic(normalized_input)
+        if results:
+            return self._evaluate_ambiguity(results, raw_input, cleaned)
         
         print(f"❌ [SmartMatcher] No match found for: '{raw_input}'")
         return None
+
+    def _evaluate_ambiguity(self, results: list, raw_text: str, cleaned: str) -> dict:
+        if len(results) == 1 or results[0]['score'] > 0.95:
+            res = results[0]
+            res['cleaned_input'] = cleaned
+            res['raw_input'] = raw_text
+            res['needs_clarification'] = False
+            return res
+            
+        margin = results[0]['score'] - results[1]['score']
+        res = results[0]
+        res['cleaned_input'] = cleaned
+        res['raw_input'] = raw_text
+        
+        if margin < 0.10 and results[0]['item']['id'] != results[1]['item']['id']:
+            print(f"⚠️ [SmartMatcher] AMBIGUITY DETECTED: ({res['score']:.2f}) {results[0]['item']['name']} vs ({results[1]['score']:.2f}) {results[1]['item']['name']}")
+            res['needs_clarification'] = True
+            res['alternatives'] = [results[1]['item']]
+        else:
+            res['needs_clarification'] = False
+            
+        return res
 
     def _try_exact(self, text: str) -> dict | None:
         """O(1) lookup against alias dictionary."""
@@ -98,41 +115,63 @@ class SmartMatcher:
             }
         return None
 
-    def _try_fuzzy(self, text: str, threshold: float = 0.70) -> dict | None:
+    def _try_fuzzy(self, text: str, threshold: float = 0.70) -> list | None:
         """Fuzzy match against all aliases using SequenceMatcher."""
-        best_score = 0.0
-        best_alias = None
-        
+        matches = []
         for alias in self.all_aliases:
             ratio = difflib.SequenceMatcher(None, text, alias).ratio()
-            if ratio > best_score:
-                best_score = ratio
-                best_alias = alias
+            if ratio >= threshold:
+                matches.append((ratio, alias))
         
-        if best_score >= threshold and best_alias:
-            item = self.reverse_lookup[best_alias]
-            print(f"✅ [SmartMatcher] FUZZY match: '{text}' ≈ '{best_alias}' → '{item['name']}' (score: {best_score:.2f})")
-            return {
-                'item': item,
-                'score': best_score,
-                'method': 'fuzzy',
-                'distance': 1.0 - best_score,
-            }
+        if not matches:
+            return None
+            
+        matches.sort(key=lambda x: x[0], reverse=True)
+        
+        results = []
+        seen_ids = set()
+        for m in matches:
+            item = self.reverse_lookup[m[1]]
+            if item['id'] not in seen_ids:
+                seen_ids.add(item['id'])
+                results.append({
+                    'item': item,
+                    'score': m[0],
+                    'method': 'fuzzy',
+                    'distance': 1.0 - m[0],
+                    'alias_matched': m[1]
+                })
+            if len(results) >= 2:
+                break
+                
+        if results:
+            print(f"✅ [SmartMatcher] FUZZY match: '{text}' ≈ '{results[0]['alias_matched']}' → '{results[0]['item']['name']}' (score: {results[0]['score']:.2f})")
+            return results
         return None
 
-    def _try_semantic(self, text: str, max_distance: float = 1.2) -> dict | None:
+    def _try_semantic(self, text: str, max_distance: float = 1.2) -> list | None:
         """FAISS semantic embedding search (existing infrastructure)."""
-        result = faiss_matcher.match(text, top_k=1)
-        if result and result['distance'] < max_distance:
-            score = max(0.0, 1.0 - (result['distance'] / 2.0))
-            item = result['item']
-            print(f"✅ [SmartMatcher] SEMANTIC match: '{text}' → '{item['name']}' (dist: {result['distance']:.4f}, score: {score:.2f})")
-            return {
-                'item': item,
-                'score': score,
-                'method': 'semantic',
-                'distance': result['distance'],
-            }
+        faiss_results = faiss_matcher.match(text, top_k=2)
+        if not faiss_results: return None
+        
+        # Force it into a list if top_k=1 was accidentally used
+        if isinstance(faiss_results, dict):
+            faiss_results = [faiss_results]
+            
+        valid_results = []
+        for r in faiss_results:
+            if r['distance'] < max_distance:
+                score = max(0.0, 1.0 - (r['distance'] / 2.0))
+                valid_results.append({
+                    'item': r['item'],
+                    'score': score,
+                    'method': 'semantic',
+                    'distance': r['distance']
+                })
+                
+        if valid_results:
+            print(f"✅ [SmartMatcher] SEMANTIC match: '{text}' → '{valid_results[0]['item']['name']}' (dist: {valid_results[0]['distance']:.4f}, score: {valid_results[0]['score']:.2f})")
+            return valid_results
         return None
 
 

@@ -15,7 +15,8 @@ app.use(express.json());
 // Initialize Data Arrays
 let menuItems = [];
 let orders = [];
-let ratings = {};  // Menu item ratings: { itemId: rating (3.0-5.0) }
+let ratings = {};       // Menu item ratings: { itemId: rating (3.0-5.0) }
+let adminRatings = {};  // Admin-set overrides — these NEVER get regenerated
 let inventoryAlerts = [
     { ingredient: 'Mozzarella Cheese', status: 'Depleting fast', stock: '4.2 kg', type: 'critical' },
     { ingredient: 'Premium Coffee Beans', status: 'Reorder needed', stock: '1.8 kg', type: 'warning' },
@@ -37,13 +38,22 @@ fs.createReadStream(path.join(__dirname, 'data', 'menu.csv'))
     })
     .on('end', () => {
         console.log('CSV file successfully processed');
-        // Generate random ratings 3.0–5.0 for each item (deterministic from id)
+        // Generate default ratings ONLY for items that don't already have one.
+        // Admin-set ratings always take priority and are never overwritten.
+        let generated = 0;
         menuItems.forEach(item => {
-            // Seed-like: use item id to create a consistent-ish random
-            const seed = (item.id * 2654435761) % 100;  // Knuth hash
-            ratings[item.id] = parseFloat((3.0 + (seed / 100) * 2.0).toFixed(1));
+            if (adminRatings[item.id] !== undefined) {
+                // Admin override exists — use it, do NOT regenerate
+                ratings[item.id] = adminRatings[item.id];
+            } else if (ratings[item.id] === undefined) {
+                // No rating at all — seed a deterministic default
+                const seed = (item.id * 2654435761) % 100;  // Knuth hash
+                ratings[item.id] = parseFloat((3.0 + (seed / 100) * 2.0).toFixed(1));
+                generated++;
+            }
+            // else: rating already exists from a previous load, keep it
         });
-        console.log(`⭐ Ratings generated for ${Object.keys(ratings).length} items`);
+        console.log(`⭐ Ratings: ${generated} generated, ${Object.keys(adminRatings).length} admin-set`);
     });
 
 const categorizeMenu = () => {
@@ -75,7 +85,7 @@ app.get('/api/ratings', (req, res) => {
     res.json({ ratings });
 });
 
-// Admin: Update a single item's rating
+// Admin: Update a single item's rating — persisted across CSV reloads
 app.put('/api/admin/ratings/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { rating } = req.body;
@@ -84,9 +94,11 @@ app.put('/api/admin/ratings/:id', (req, res) => {
     }
     const item = menuItems.find(m => m.id === id);
     if (!item) return res.status(404).json({ error: 'Item not found' });
-    ratings[id] = parseFloat(parseFloat(rating).toFixed(1));
-    console.log(`⭐ [Admin] Rating for '${item.name}' updated to ${ratings[id]}`);
-    res.json({ id, name: item.name, rating: ratings[id] });
+    const parsed = parseFloat(parseFloat(rating).toFixed(1));
+    ratings[id] = parsed;
+    adminRatings[id] = parsed;  // Mark as admin-set so CSV reload won't overwrite
+    console.log(`⭐ [Admin] Rating for '${item.name}' set to ${parsed} (protected)`);
+    res.json({ id, name: item.name, rating: parsed });
 });
 
 // Process internal orders securely
@@ -238,26 +250,37 @@ app.post('/api/ai/intent', async (req, res) => {
         }
 
         let finalTTS = baseEnglishReply;
-        const isFailure = baseEnglishReply === "I couldn't find that item on the menu.";
+        const isFailure = !fullItem;
         
-        if (!isFailure) {
-            try {
-                const trResponse = await fetch('http://localhost:8000/nlp/translate_output', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: baseEnglishReply, target_lang: language })
-                });
-                const trResult = await trResponse.json();
-                finalTTS = trResult.translated_text || baseEnglishReply;
-            } catch (trErr) {
-                console.error("V8 Reverse TTS mapping failed (fallback to hardcoded):", trErr.message);
-                if (intent.action === 'add' && language === 'hi-IN') finalTTS = `आपके कार्ट में ${intent.quantity} ${fullItem.name} जोड़ दिए गए हैं।`;
-                if (intent.action === 'add' && language === 'gu-IN') finalTTS = `તમારા કાર્ટમાં ${intent.quantity} ${fullItem.name} ઉમેરવામાં આવ્યા છે.`;
-                if (intent.action === 'remove' && language === 'hi-IN') finalTTS = `आपके कार्ट से ${fullItem.name} हटा दिया गया है।`;
-                if (intent.action === 'remove' && language === 'gu-IN') finalTTS = `તમારા કાર્ટમાંથી ${fullItem.name} કાઢી નાખવામાં આવ્યું છે.`;
-            }
-        } else {
-            finalTTS = getLocalizedReply(baseEnglishReply, "मुझे वह आइटम मेनू में नहीं मिला।", "મને મેનુમાં તે આઇટમ મળી નથી.");
+        // Local multilingual TTS — no external call needed, avoids the broken /nlp/translate_output dependency
+        if (fullItem && intent.action === 'add') {
+            const instrNote = intent.special_instructions ? ` (${intent.special_instructions})` : '';
+            const qty = intent.quantity || 1;
+            const name = fullItem.name;
+            if (language === 'hi-IN') finalTTS = `आपके कार्ट में ${qty} ${name}${instrNote} जोड़ दिए गए हैं।`;
+            else if (language === 'gu-IN') finalTTS = `તમારા કાર્ટમાં ${qty} ${name}${instrNote} ઉમેરવામાં આવ્યા છે.`;
+            else if (language === 'ta-IN') finalTTS = `உங்கள் கார்ட்டில் ${qty} ${name}${instrNote} சேர்க்கப்பட்டது.`;
+            else if (language === 'ml-IN') finalTTS = `${qty} ${name}${instrNote} കാർട്ടിൽ ചേർത്തു.`;
+            else if (language === 'mr-IN') finalTTS = `${qty} ${name}${instrNote} तुमच्या कार्टमध्ये जोडले.`;
+            else if (language === 'ar-SA') finalTTS = `تمت إضافة ${qty} ${name}${instrNote} إلى سلة التسوق.`;
+            else finalTTS = `Added ${qty} ${name}${instrNote} to your cart.`;
+        } else if (fullItem && intent.action === 'remove') {
+            if (language === 'hi-IN') finalTTS = `आपके कार्ट से ${fullItem.name} हटा दिया गया है।`;
+            else if (language === 'gu-IN') finalTTS = `તમારા કાર્ટમાંથી ${fullItem.name} કાઢી નાખવામાં આવ્યું છે.`;
+            else if (language === 'ta-IN') finalTTS = `${fullItem.name} கார்ட்டிலிருந்து நீக்கப்பட்டது.`;
+            else if (language === 'ml-IN') finalTTS = `${fullItem.name} കാർട്ടിൽ നിന്ന് നീക്കി.`;
+            else if (language === 'mr-IN') finalTTS = `${fullItem.name} तुमच्या कार्टमधून काढले.`;
+            else if (language === 'ar-SA') finalTTS = `تمت إزالة ${fullItem.name} من سلة التسوق.`;
+            else finalTTS = `Removed ${fullItem.name} from your cart.`;
+        } else if (isFailure) {
+            const itemName = intent.search_query || 'that item';
+            if (language === 'hi-IN') finalTTS = `मुझे "${itemName}" मेनू में नहीं मिला। क्या आप फिर से कहेंगे?`;
+            else if (language === 'gu-IN') finalTTS = `"${itemName}" મેનુમાં મળ્યો નહીં. ફરી પ્રયાસ કરો.`;
+            else if (language === 'ta-IN') finalTTS = `"${itemName}" மெனுவில் இல்லை. மீண்டும் சொல்லுங்கள்.`;
+            else if (language === 'ml-IN') finalTTS = `"${itemName}" മെനുവിൽ കണ്ടെത്തിയില്ല. ദയവായി വീണ്ടും പറയൂ.`;
+            else if (language === 'mr-IN') finalTTS = `"${itemName}" मेनूमध्ये सापडला नाही. पुन्हा प्रयत्न करा.`;
+            else if (language === 'ar-SA') finalTTS = `لم أجد "${itemName}" في القائمة. هل يمكنك المحاولة مرة أخرى؟`;
+            else finalTTS = `I couldn't find "${itemName}" on the menu. Could you try saying it differently?`;
         }
         
         // Enhanced server-side logging
@@ -283,6 +306,138 @@ app.post('/api/ai/upsell', (req, res) => {
     } else {
         res.json({ suggestion: null });
     }
+});
+
+// ── Smart Menu Q&A ──────────────────────────────────────────────────────────
+// Answers natural language questions about the menu using live data.
+// Handles: "what's the menu", "do you have dosa", "price of misal pav",
+//          "show veg items", "what's popular", "breakfast items" etc.
+app.post('/api/ai/menu-query', (req, res) => {
+    const { text = '', language = 'en-IN' } = req.body;
+    const lower = text.toLowerCase().trim();
+
+    if (menuItems.length === 0) {
+        return res.json({ type: 'error', reply: 'Menu is currently loading. Please try again in a moment.' });
+    }
+
+    // ── 1. Full menu listing ──
+    const fullMenuTriggers = ['menu', 'menu batao', 'show menu', 'kya hai', 'what do you have',
+        'aaj kya', 'available hai', 'what is there', 'all items', 'full menu',
+        'menu dikhao', 'menu kya hai', 'menu list'];
+    
+    if (fullMenuTriggers.some(t => lower.includes(t))) {
+        const byCategory = {};
+        menuItems.forEach(item => {
+            if (!byCategory[item.category]) byCategory[item.category] = [];
+            byCategory[item.category].push(item.name);
+        });
+        const parts = Object.entries(byCategory).map(([cat, items]) =>
+            `**${cat}**: ${items.slice(0, 4).join(', ')}${items.length > 4 ? ` (+${items.length - 4} more)` : ''}`
+        );
+        const reply = `Here's our menu:\n${parts.join('\n')}`;
+        return res.json({ type: 'menu_list', reply, categories: Object.keys(byCategory), rawData: byCategory });
+    }
+
+    // ── 2. Price lookup ──
+    const priceMatch = lower.match(/price of (.+)|how much is (.+)|(.+) ka price|(.+) kitne ka/);
+    if (priceMatch) {
+        const query = (priceMatch[1] || priceMatch[2] || priceMatch[3] || priceMatch[4] || '').trim();
+        if (query) {
+            const found = menuItems.find(m => m.name.toLowerCase().includes(query) || query.includes(m.name.toLowerCase()));
+            if (found) {
+                const reply = `${found.name} is priced at ₹${found.price}.`;
+                return res.json({ type: 'price', reply, item: found });
+            }
+        }
+    }
+
+    // ── 3. Item availability ("do you have X", "X hai?", "X milega?") ──
+    const availMatch = lower.match(/(?:do you have|is there|have you got|milega|hai|available)\s+(.+)|(.+)\s+(?:hai|milega|available|hai kya)/);
+    if (availMatch) {
+        const query = (availMatch[1] || availMatch[2] || '').trim().replace(/\?/g, '');
+        if (query && query.length > 1) {
+            // Fuzzy search using levenshtein
+            let bestMatch = null;
+            let bestScore = Infinity;
+            menuItems.forEach(item => {
+                const dist = levenshtein(item.name.toLowerCase(), query);
+                const partialMatch = item.name.toLowerCase().includes(query) || query.includes(item.name.toLowerCase().split(' ')[0]);
+                if (partialMatch || dist <= 3) {
+                    if (dist < bestScore) { bestScore = dist; bestMatch = item; }
+                }
+            });
+            if (bestMatch) {
+                const reply = `Yes! We have **${bestMatch.name}** for ₹${bestMatch.price}. Would you like to add it to your cart?`;
+                return res.json({ type: 'availability', reply, item: bestMatch, available: true });
+            } else {
+                const reply = `Sorry, we don't have "${query}" on our menu right now. Here are some popular items instead: ${menuItems.filter(m => m.popularity > 0.85).slice(0, 3).map(m => m.name).join(', ')}.`;
+                return res.json({ type: 'availability', reply, available: false });
+            }
+        }
+    }
+
+    // ── 4. Category-based listing ──
+    const categoryKeywords = {
+        'Starters': ['starter', 'starters', 'appetizer', 'snacks', 'snack', 'nashta', 'nashtha'],
+        'Main Course': ['main', 'main course', 'main dish', 'khana', 'lunch', 'dinner'],
+        'Sides': ['side', 'sides', 'side dish', 'extras'],
+        'Drinks': ['drink', 'drinks', 'beverage', 'beverages', 'peene', 'cold drink', 'pani', 'juice'],
+        'Combos': ['combo', 'combos', 'set', 'meal deal'],
+        'Desserts': ['dessert', 'desserts', 'sweet', 'mithai', 'meetha'],
+    };
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some(k => lower.includes(k))) {
+            const items = menuItems.filter(m => m.category === category);
+            if (items.length > 0) {
+                const list = items.slice(0, 5).map(m => `${m.name} (₹${m.price})`).join(', ');
+                const reply = `In **${category}**, we have: ${list}${items.length > 5 ? ` and ${items.length - 5} more.` : '.'}`;
+                return res.json({ type: 'category', reply, category, items });
+            }
+        }
+    }
+
+    // ── 5. Veg / Non-veg filter ──
+    if (['veg', 'vegetarian', 'veggie', 'veg option', 'veg items'].some(k => lower.includes(k)) && !lower.includes('non')) {
+        const vegItems = menuItems.filter(m => m.isVeg).slice(0, 6).map(m => `${m.name} (₹${m.price})`).join(', ');
+        return res.json({ type: 'filter', reply: `Our vegetarian options include: ${vegItems}.` });
+    }
+    if (['non-veg', 'non veg', 'chicken', 'mutton', 'meat', 'nonveg'].some(k => lower.includes(k))) {
+        const nonVegItems = menuItems.filter(m => !m.isVeg).slice(0, 6).map(m => `${m.name} (₹${m.price})`).join(', ');
+        if (nonVegItems.length === 0) {
+            return res.json({ type: 'filter', reply: 'We are a pure vegetarian restaurant! All our items are veg.' });
+        }
+        return res.json({ type: 'filter', reply: `Our non-vegetarian options include: ${nonVegItems}.` });
+    }
+
+    // ── 6. Popular / recommended items ──
+    if (['popular', 'best', 'recommend', 'sabse acha', 'bestseller', 'famous', 'special', 'top'].some(k => lower.includes(k))) {
+        const popular = [...menuItems].sort((a, b) => b.popularity - a.popularity).slice(0, 5);
+        const list = popular.map(m => `${m.name} (₹${m.price})`).join(', ');
+        return res.json({ type: 'popular', reply: `Our most popular items are: ${list}. Would you like to add any?`, items: popular });
+    }
+
+    // ── 7. Spicy / hot items ──
+    if (['spicy', 'hot', 'masaledar', 'tikha', 'teetha', 'teekha'].some(k => lower.includes(k))) {
+        const spicyItems = menuItems.filter(m => m.tags && (m.tags.includes('Spicy') || m.tags.includes('Hot'))).slice(0, 5);
+        if (spicyItems.length > 0) {
+            const list = spicyItems.map(m => `${m.name} (₹${m.price})`).join(', ');
+            return res.json({ type: 'filter', reply: `Our spicy items: ${list}. Want one?` });
+        }
+    }
+
+    // ── 8. Cheap / budget items ──
+    if (['cheap', 'budget', 'affordable', 'sasta', 'kam price', 'low price'].some(k => lower.includes(k))) {
+        const cheap = [...menuItems].sort((a, b) => a.price - b.price).slice(0, 5);
+        const list = cheap.map(m => `${m.name} (₹${m.price})`).join(', ');
+        return res.json({ type: 'filter', reply: `Our most affordable items: ${list}.`, items: cheap });
+    }
+
+    // ── Fallback ──
+    const topItems = [...menuItems].sort((a, b) => b.popularity - a.popularity).slice(0, 4).map(m => m.name).join(', ');
+    return res.json({
+        type: 'suggestion',
+        reply: `I'm not sure what you're asking. Our top items today are: ${topItems}. You can ask me about the menu, prices, or specific items!`
+    });
 });
 
 // ── Admin Revenue Intelligence & Menu Analytics Engine ─────────────────

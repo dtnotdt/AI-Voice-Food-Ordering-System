@@ -153,7 +153,7 @@ const GlobalVoiceBot = () => {
 
     // ── IDLE state: normal ordering + confirm detection ────────────────
     const handleIdleInput = async (text) => {
-        // Comprehensive confirm phrases across all 3 languages
+        // Comprehensive confirm phrases across all 7 languages
         const confirmPhrases = [
             // English
             'confirm order', 'place order', 'complete order', 'checkout',
@@ -171,15 +171,34 @@ const GlobalVoiceBot = () => {
             'ઓર્ડર કન્ફર્મ કરો', 'મારું ઓર્ડર કન્ફર્મ કરો',
             'ઓર્ડર મૂકો', 'ઓર્ડર પૂરો કરો',
             'કન્ફર્મ કરો', 'ઓર્ડર કરો', 'બસ થઈ ગયું', 'કન્ફર્મ',
+            // Tamil
+            'ஆர்டர் உறுதிப்படுத்து', 'ஆர்டர் செய்', 'உறுதிப்படுத்து',
+            'முடிந்தது', 'போதும்',
+            // Malayalam
+            'ഓർഡർ ഉറപ്പാക്കുക', 'ഓർഡർ ചെയ്യുക', 'ഉറപ്പാക്കുക',
+            'മതി', 'കഴിഞ്ഞു',
+            // Marathi
+            'ऑर्डर कन्फर्म करा', 'ऑर्डर द्या', 'कन्फर्म करा',
+            'बस झालं', 'पूर्ण',
+            // Arabic
+            'تأكيد الطلب', 'أكد الطلب', 'تأكيد', 'خلاص', 'انتهيت',
         ];
 
-        // Remove phrases across all 3 languages
+        // Remove phrases across all 7 languages
         const removePhrases = [
             'remove', 'delete', 'cancel item',
             'हटाओ', 'हटा दो', 'निकालो', 'कार्ट से हटाओ',
             'hatao', 'hata do', 'nikalo',
             'કાઢો', 'કાઢી', 'કાર્ટમાંથી કાઢો', 'દૂર કરો',
             'kadho', 'door karo',
+            // Tamil
+            'நீக்கு', 'அகற்று',
+            // Malayalam
+            'നീക്കം ചെയ്യുക', 'മാറ്റുക',
+            // Marathi
+            'काढा', 'हटवा',
+            // Arabic
+            'احذف', 'ازل', 'شيل',
         ];
         
         const lower = text.toLowerCase();
@@ -196,15 +215,48 @@ const GlobalVoiceBot = () => {
         if (isConfirmIntent) {
             if (cart.length === 0) {
                 playFailureSound();
-                const reply = language === 'hi-IN' ? 'आपका कार्ट खाली है। पहले कुछ आइटम जोड़ें।' :
-                              language === 'gu-IN' ? 'તમારું કાર્ટ ખાલી છે. પહેલા કેટલીક વસ્તુઓ ઉમેરો.' :
-                              'Your cart is empty. Please add some items first.';
+                const emptyCartMessages = {
+                    'hi-IN': 'आपका कार्ट खाली है। पहले कुछ आइटम जोड़ें।',
+                    'gu-IN': 'તમારું કાર્ટ ખાલી છે. પહેલા કેટલીક વસ્તુઓ ઉમેરો.',
+                    'ta-IN': 'உங்கள் கார்ட் காலியாக உள்ளது. முதலில் சில பொருட்களைச் சேர்க்கவும்.',
+                    'ml-IN': 'നിങ്ങളുടെ കാർട്ട് ശൂന്യมാണ്. ആദ്യം ചില ഐറ്റങ്ങൾ ചേർക്കുക.',
+                    'mr-IN': 'तुमचा कार्ट रिकामा आहे. कृपया आधी काही आयटम जोडा.',
+                    'ar-SA': 'سلة التسوق فارغة. أضف بعض العناصر أولاً.',
+                };
+                const reply = emptyCartMessages[language] || 'Your cart is empty. Please add some items first.';
                 setBotReply(reply);
                 speak(reply);
                 return;
             }
             await startConfirmFlow();
             return;
+        }
+
+        // ── Smart Menu Q&A Detection ──
+        // Detect menu-query phrases before hitting the ordering intent API
+        const menuQueryTriggers = [
+            'menu', 'what do you have', 'what do you serve', 'what items', 'available',
+            'do you have', 'hai kya', 'milega', 'price of', 'how much', 'ka price',
+            'show me', 'batao', 'kya hai', 'popular', 'best item', 'recommend',
+            'veg option', 'veg item', 'breakfast', 'snacks', 'drinks', 'combo', 'special',
+            'spicy', 'affordable', 'sasta', 'cheap', "what's your", 'what is your',
+        ];
+        const isMenuQuery = menuQueryTriggers.some(t => lower.includes(t));
+        
+        if (isMenuQuery) {
+            try {
+                const mqRes = await axios.post('http://localhost:3001/api/ai/menu-query', { text, language });
+                const { reply: mqReply } = mqRes.data;
+                if (mqReply) {
+                    // Convert markdown bold (**text**) to plain text for TTS
+                    const plainReply = mqReply.replace(/\*\*/g, '');
+                    setBotReply(plainReply);
+                    speak(plainReply);
+                    return;
+                }
+            } catch (mqErr) {
+                console.warn('[VoiceBot] Menu Q&A failed, falling through to intent API', mqErr.message);
+            }
         }
 
         // Normal intent processing (add/remove items)
@@ -228,9 +280,15 @@ const GlobalVoiceBot = () => {
                     removeFromCart(itemId);
                 } else {
                     playFailureSound();
-                    const notInCartReply = language === 'hi-IN' ? 'वह आइटम आपके कार्ट में नहीं है।' :
-                                          language === 'gu-IN' ? 'તે આઇટમ તમારા કાર્ટમાં નથી.' :
-                                          'That item is not in your cart.';
+                    const notInCartMessages = {
+                        'hi-IN': 'वह आइटम आपके कार्ट में नहीं है।',
+                        'gu-IN': 'તે આઇટમ તમારા કાર્ટમાં નથી.',
+                        'ta-IN': 'அந்த பொருள் உங்கள் கார்ட்டில் இல்லை.',
+                        'ml-IN': 'ആ ഐറ്റം നിങ്ങളുടെ കാർട്ടിൽ ഇല്ല.',
+                        'mr-IN': 'तो आयटम तुमच्या कार्टमध्ये नाही.',
+                        'ar-SA': 'هذا العنصر ليس في سلة التسوق الخاصة بك.',
+                    };
+                    const notInCartReply = notInCartMessages[language] || 'That item is not in your cart.';
                     setBotReply(notInCartReply);
                     speak(notInCartReply);
                     return;
@@ -415,9 +473,12 @@ const GlobalVoiceBot = () => {
             price: c.price
         }));
 
+        // Get phone_number from localStorage session (set after OTP auth) or use guest placeholder
+        const sessionPhone = localStorage.getItem('petpooja_phone') || '0000000000';
         const res = await axios.post('http://localhost:3001/api/voice/final-confirm', {
             cart: cartData,
             address: pendingAddress || { area: 'Voice Address' },
+            phone_number: sessionPhone,
             language
         });
 
@@ -490,10 +551,36 @@ const GlobalVoiceBot = () => {
                         </button>
 
                         <div className="flex flex-col items-center mt-4">
-                            <div className="flex gap-2 mb-4 bg-gray-100 p-1.5 rounded-2xl">
-                                <button onClick={() => setLanguage('en-IN')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${language === 'en-IN' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>English</button>
-                                <button onClick={() => setLanguage('hi-IN')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${language === 'hi-IN' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>हिंदी</button>
-                                <button onClick={() => setLanguage('gu-IN')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${language === 'gu-IN' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>ગુજરાતી</button>
+                            <div className="w-full flex gap-3 mb-6 overflow-x-auto pb-2 px-1 scrollbar-hide snap-x">
+                                {[
+                                    { code: 'en-IN', label: 'English', native: 'English', flag: '🇬🇧' },
+                                    { code: 'hi-IN', label: 'Hindi', native: 'हिंदी', flag: '🇮🇳' },
+                                    { code: 'gu-IN', label: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+                                    { code: 'ta-IN', label: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
+                                    { code: 'ml-IN', label: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
+                                    { code: 'mr-IN', label: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+                                    { code: 'ar-SA', label: 'Arabic', native: 'العربية', flag: '🇸🇦' },
+                                ].map((lang) => (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => setLanguage(lang.code)}
+                                        className={`snap-center flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 text-left ${
+                                            language === lang.code
+                                                ? 'border-orange-500 bg-orange-50 shadow-md ring-2 ring-orange-100 scale-105'
+                                                : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        <span className="text-2xl drop-shadow-sm">{lang.flag}</span>
+                                        <div className="flex flex-col min-w-0 pr-2">
+                                            <span className={`text-sm font-extrabold truncate ${language === lang.code ? 'text-orange-700' : 'text-gray-700'}`}>
+                                                {lang.native}
+                                            </span>
+                                            <span className={`text-[10px] uppercase tracking-widest font-bold mt-0.5 ${language === lang.code ? 'text-orange-500/80' : 'text-gray-400'}`}>
+                                                {lang.label}
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
 
                             {/* Flow State Indicator */}

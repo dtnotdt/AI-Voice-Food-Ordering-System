@@ -11,49 +11,77 @@ import unicodedata
 ENGLISH_FILLERS = {
     # Intent / action
     "add", "order", "give", "get", "want", "put", "make", "place",
-    "include", "remove", "delete", "cancel", "increase", "decrease",
+    "include", "remove", "delete", "cancel", "increase", "decrease", "change",
     # Pronouns / articles / connectors
     "i", "me", "my", "we", "us", "the", "a", "an", "some", "to", "of",
-    "and", "with", "also", "more", "it", "this", "that",
+    "and", "with", "without", "also", "more", "less", "extra", "no", "only", "it", "this", "that", "same",
     # Polite / filler
-    "please", "can", "could", "would", "like", "just",
-    # Quantifiers (handled separately in NLU, strip from matching)
-    "one", "two", "three", "four", "five",
+    "please", "can", "could", "would", "like", "just", "for", "is", "are", "do", "have", "has", "in",
+    # Modifiers
+    "spicy", "sweet", "cold", "hot", "crispy", "jain", "half", "full", "medium",
     # Cart / ordering
-    "cart", "basket", "bill", "checkout", "pay",
-    # Misc common
-    "do", "does", "have", "has", "is", "are", "in",
+    "cart", "basket", "bill", "checkout", "pay", "done", "confirm",
+    # Quantifiers
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
 }
 
 HINDI_FILLERS = {
-    # Romanized Hindi
     "mujhe", "chahiye", "karo", "kar", "de", "do", "dena", "dedo",
-    "ek", "bhi", "aur", "haan", "yeh", "woh", "lagao", "rakh",
+    "ek", "do", "teen", "char", "paanch",
+    "bhi", "aur", "haan", "yeh", "woh", "lagao", "rakh",
     "mera", "meri", "mere", "humko", "hamein", "dijiye", "daal",
-    "lao", "le", "lelo", "lo", "bolo",
-    "hatao", "hata", "nikalo", "hata do",  # Remove action words
+    "lao", "le", "lelo", "lo", "bolo", "bina", "mat", "nahi",
+    "hatao", "hata", "nikalo", "hata do",
+    "zyada", "kam", "extra", "thikha", "spicy",
     # Devanagari Hindi
     "मुझे", "चाहिए", "करो", "कर", "दे", "दो", "देना", "एक",
     "भी", "और", "हाँ", "यह", "वो", "लगाओ", "रख", "मेरा",
-    "मेरी", "दीजिए", "डाल", "लाओ", "ले", "लो", "बोलो",
-    "हटाओ", "हटा", "निकालो", "कार्ट", "से",  # Remove action words
+    "मेरी", "दीजिए", "डाल", "लाओ", "ले", "लो", "बोलो", "बिना", "मत", "नहीं",
+    "हटाओ", "हटा", "निकालो", "कार्ट", "से", "ज़्यादा", "कम", "तीखा"
 }
 
 GUJARATI_FILLERS = {
-    # Romanized Gujarati
-    "mane", "apo", "karo", "ek", "be", "pan", "ne", "jo",
-    "aavo", "chhe", "apjo", "nakhjo", "raakho", "maaro",
-    "maari", "lavo", "lo",
-    "kadho", "kadhi", "door",  # Remove action words
+    "mane", "apo", "karo", "ek", "be", "tran", "char", "panch",
+    "pan", "ne", "jo", "aavo", "chhe", "apjo", "nakhjo", "raakho", "maaro",
+    "maari", "lavo", "lo", "vagarna", "vagar", "nathi",
+    "kadho", "kadhi", "door", "vadhare", "ochhu",
     # Gujarati script
-    "મને", "આપો", "કરો", "એક", "બે", "પણ", "ને", "જો",
+    "મને", "આપો", "કરો", "એક", "બે", "ત્રણ", "ચાર", "પાંચ", "પણ", "ને", "જો",
     "આવો", "છે", "આપજો", "નાખજો", "રાખો", "મારો",
-    "મારી", "લાવો", "લો",
-    "કાઢો", "કાઢી", "દૂર", "કાર્ટમાંથી",  # Remove action words
+    "મારી", "લાવો", "લો", "વગરના", "વગર", "નથી",
+    "કાઢો", "કાઢી", "દૂર", "કાર્ટમાંથી", "વધારે", "ઓછું"
 }
 
-ALL_FILLERS = ENGLISH_FILLERS | HINDI_FILLERS | GUJARATI_FILLERS
+MARATHI_FILLERS = {
+    "mala", "pahije", "dya", "de", "kara", "ghya", "ani", "ek", "don", "teen",
+    "nako", "kadhun", "taka", "jast", "kami", "shiwai",
+    "मला", "पाहिजे", "द्या", "दे", "करा", "घ्या", "आणि", "एक", "दोन", "तीन",
+    "नको", "काढून", "टाका", "जास्त", "कमी", "शिवाय"
+}
 
+TAMIL_FILLERS = {
+    "ennakku", "venum", "kudu", "vei", "podu", "onnu", "rendu", "moonu",
+    "illai", "venda", "remove", "eduthiru", "adhigam", "kuraiva", "mattum",
+    "எனக்கு", "வேணும்", "குடு", "வெய்", "போடு", "ஒன்னு", "ரெண்டு", "மூனு",
+    "இல்லை", "வேண்டாம்", "எடுத்துரு", "அதிகம்", "குறைவா", "மட்டும்"
+}
+
+MALAYALAM_FILLERS = {
+    "enikku", "venam", "tharu", "onnu", "randu", "moonnu",
+    "venda", "maattu", "ozhivaakku", "kooduthal", "kuravu",
+    "എനിക്ക്", "വേണം", "തരൂ", "ഒന്ന്", "രണ്ട്", "മൂന്ന്",
+    "വേണ്ട", "മാറ്റൂ", "ഒഴിവാക്കൂ", "കൂടുതൽ", "കുറവ്"
+}
+
+ARABIC_FILLERS = {
+    "uridu", "aetini", "wahid", "ithnan", "thalatha", "bedoon", "min", "fadlik", "bila",
+    "lakin", "wa", "aw", "zid", "naqis", "izala", "ilgha",
+    "اريد", "اعطني", "واحد", "اثنان", "ثلاثة", "بدون", "من", "فضلك", "بلا",
+    "لكن", "و", "او", "زد", "نقص", "ازالة", "الغاء"
+}
+
+ALL_FILLERS = (ENGLISH_FILLERS | HINDI_FILLERS | GUJARATI_FILLERS |
+               MARATHI_FILLERS | TAMIL_FILLERS | MALAYALAM_FILLERS | ARABIC_FILLERS)
 
 def normalize(text: str) -> str:
     """Lowercase, strip, collapse whitespace. Preserves Hindi/Gujarati vowel marks."""

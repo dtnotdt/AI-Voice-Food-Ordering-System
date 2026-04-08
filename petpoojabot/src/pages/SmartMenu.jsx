@@ -88,20 +88,63 @@ const SmartMenu = () => {
         );
     };
 
-    // Food images pool — each item gets a unique image based on its ID
-    const foodImagePool = [
-        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=400",
-        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&q=80&w=400",
-    ];
-    const getItemImage = (id) => foodImagePool[id % foodImagePool.length];
+    // --- dynamic image loading function ---
+    const getDynamicImage = (name, category) => {
+        // Sanitize the name for reliable image query (Unsplash Source API was permanently discontinued).
+        // Using a reliable generic thumbnail proxy generator that works perfectly for food.
+        const query = encodeURIComponent(name.replace(/[^a-zA-Z0-9\s]/g, '').trim() + ' ' + (category || '') + ' food');
+        
+        return `https://tse2.mm.bing.net/th?q=${query}&w=400&h=300&c=7&rs=1&p=0&dpr=2&pid=1.7&mkt=en-IN&adlt=moderate`;
+    };
 
-    const dummyImage = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400";
+    // --- Image Component with Fallback ---
+    const FoodImage = ({ name, category }) => {
+        const [imgSrc, setImgSrc] = useState('');
+        const [hasError, setHasError] = useState(false);
+        const [isLoading, setIsLoading] = useState(true);
+
+        // Fallback placeholder image (reliable static image hosted on Unsplash CDN)
+        const placeholderImg = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400";
+
+        useEffect(() => {
+            setImgSrc(getDynamicImage(name, category));
+            setIsLoading(true);
+            setHasError(false);
+        }, [name, category]);
+
+        const handleError = () => {
+             if (!hasError) {
+                setImgSrc(placeholderImg);
+                setHasError(true);
+                // Wait for the fallback to load before setting isLoading to false
+            }
+        };
+
+        const handleLoad = () => {
+            setIsLoading(false);
+        };
+
+        return (
+             <>
+                 {isLoading && (
+                     <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
+                         <div className="w-8 h-8 text-gray-300 opacity-80 animate-bounce">🍽️</div>
+                     </div>
+                 )}
+                {imgSrc && (
+                    <img 
+                        src={imgSrc} 
+                        alt={`Image of ${name}`} 
+                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                        loading="lazy"
+                        onError={handleError}
+                        onLoad={handleLoad}
+                    />
+                )}
+             </>
+        );
+    };
+
     const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     return (
@@ -223,59 +266,62 @@ const SmartMenu = () => {
                                 </div>
                             )}
 
-                            <div className="relative h-56 overflow-hidden">
-                                <img src={getItemImage(item.id)} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="relative h-56 overflow-hidden bg-gray-100 rounded-t-3xl">
+                                <FoodImage name={item.name} category={item.category} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
-                                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                                <div className="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
                                     {!vegOnly && (
                                         item.isVeg ? (
-                                            <span className="bg-white/95 backdrop-blur-md text-green-700 text-xs px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1 border border-green-100">
-                                                <div className="w-2 h-2 rounded-full bg-green-500"></div> Veg
+                                            <span className="bg-white/95 backdrop-blur-md text-green-700 text-xs px-3 py-1.5 rounded-xl font-black shadow-md flex items-center gap-1 border border-green-100 transform origin-left hover:scale-105 transition-transform">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div> Veg
                                             </span>
                                         ) : (
-                                            <span className="bg-white/95 backdrop-blur-md text-red-700 text-xs px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1 border border-red-100">
-                                                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-red-500 rounded-sm"></div> Non-Veg
+                                            <span className="bg-white/95 backdrop-blur-md text-red-700 text-xs px-3 py-1.5 rounded-xl font-black shadow-md flex items-center gap-1 border border-red-100 transform origin-left hover:scale-105 transition-transform">
+                                                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px] border-b-red-500 rounded-sm shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div> Non-Veg
                                             </span>
                                         )
                                     )}
                                     {item.engineCategory === 'Star ⭐' && (
-                                        <span className="bg-yellow-400 text-yellow-900 text-xs px-3 py-1.5 rounded-lg font-black shadow-md flex items-center gap-1 border border-yellow-300">
+                                        <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 text-xs px-3 py-1.5 rounded-xl font-black shadow-lg flex items-center gap-1 border border-yellow-300 transform origin-left hover:scale-105 transition-transform">
                                             ⭐ Bestseller
                                         </span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="p-6 flex flex-col flex-grow">
-                                <div className="flex justify-between items-start mb-1 gap-2">
+                            <div className="p-6 flex flex-col flex-grow bg-white z-10 relative">
+                                <div className="flex justify-between items-start mb-2 gap-2">
                                     <h3 className="text-xl font-bold text-gray-900 leading-tight">
-                                        <span className="text-gray-400 mr-2 text-lg">#{item.id}</span>
+                                        <span className="text-gray-400 mr-2 text-lg font-medium opacity-50">#{item.id}</span>
                                         {item.name}
                                     </h3>
-                                    <span className="text-xl font-black text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">₹{item.price}</span>
+                                    <span className="text-xl font-black text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl shadow-sm">₹{item.price}</span>
                                 </div>
 
                                 {/* Star Rating */}
-                                <div className="mb-3">
-                                    <StarRating rating={item.rating || 4.0} size={14} />
+                                <div className="mb-4 bg-gray-50/50 w-max px-2 py-1 rounded-lg">
+                                    <StarRating rating={item.rating || 4.0} size={15} />
                                 </div>
 
-                                <p className="text-gray-500 text-sm mb-5 line-clamp-2 pb-2 border-b border-gray-50 flex-grow">
+                                <p className="text-gray-500 text-sm mb-5 line-clamp-2 pb-4 border-b border-gray-100 border-dashed flex-grow leading-relaxed">
                                     A delicious offering crafted with the finest ingredients to satisfy your cravings. Prepared fresh on order.
                                 </p>
 
-                                <div className="flex flex-wrap gap-2 mb-6">
+                                <div className="flex flex-wrap gap-2 mb-6 h-max">
                                     {item.tags?.map(t => t && (
-                                        <span key={t} className="bg-gray-100 text-gray-600 text-[10px] px-2.5 py-1 rounded-md uppercase font-bold tracking-wider hover:bg-gray-200 transition-colors cursor-default">{t}</span>
+                                        <span key={t} className="bg-gray-50 text-gray-500 text-[10px] px-3 py-1.5 rounded-lg uppercase font-bold tracking-wider hover:bg-gray-100 transition-colors shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] select-none">
+                                            {t}
+                                        </span>
                                     ))}
                                 </div>
 
                                 <button
                                     onClick={() => addToCart({ ...item, quantity: 1 })}
-                                    className="w-full py-3.5 rounded-2xl font-bold transition-all duration-300 bg-gray-50 text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-200 hover:border-transparent hover:shadow-xl hover:shadow-gray-900/20 active:scale-[0.98] mt-auto"
+                                    className="w-full py-4 rounded-xl font-bold transition-all duration-300 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-[0_8px_20px_-6px_rgba(249,115,22,0.5)] hover:shadow-[0_12px_24px_-8px_rgba(249,115,22,0.6)] hover:-translate-y-0.5 active:scale-95 active:translate-y-0 mt-auto flex items-center justify-center gap-2 group/btn"
                                 >
                                     Add to Cart
+                                    <Plus size={18} className="transition-transform group-hover/btn:rotate-90 group-hover/btn:scale-110" />
                                 </button>
                             </div>
                         </div>
@@ -317,7 +363,9 @@ const SmartMenu = () => {
                             ) : (
                                 cart.map(item => (
                                     <div key={item.id} className="flex gap-4 p-4 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow">
-                                        <img src={dummyImage} alt={item.name} className="w-20 h-20 object-cover rounded-xl" />
+                                        <div className="w-20 h-20 flex-shrink-0 relative rounded-xl overflow-hidden bg-gray-100 border border-gray-100">
+                                            <FoodImage name={item.name} category={item.category} />
+                                        </div>
                                         <div className="flex-1 flex flex-col">
                                             <div className="flex justify-between items-start">
                                                 <h4 className="font-bold text-gray-900 line-clamp-1">{item.name}</h4>

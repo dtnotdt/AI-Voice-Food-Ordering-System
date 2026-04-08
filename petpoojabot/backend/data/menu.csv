@@ -1,151 +1,151 @@
 id,name,category,price,cost,popularity,tags,isVeg
-1,Veg Burger,Starters,120,60,0.68,Hot,true
-2,Paneer Pizza,Main Course,250,120,0.52,Vegan,true
-3,Peri Peri Fries,Starters,90,30,0.53,Spicy,true
-4,Fries,Sides,80,25,0.88,Hot,true
-5,Coke,Beverages,60,20,0.51,Sweet,true
-6,Garlic Bread,Starters,110,40,0.69,Cold,true
-7,Pepsi,Beverages,60,20,0.57,Vegan,true
-8,Cold Coffee,Beverages,120,40,0.85,Cold,true
-9,Veg Wrap,Starters,100,40,0.72,Spicy,true
-10,Iced Tea,Beverages,90,30,0.61,Vegan,true
-11,Combo 1: Veg Burger + Fries + Coke,Combos,199,105,0.53,Sweet,true
-12,Combo 2: Paneer Pizza + Garlic Bread + Pepsi,Combos,299,180,0.66,Cold,true
-13,Combo 3: Peri Peri Fries + Cold Coffee,Combos,149,70,0.83,Sweet,true
-14,Combo 4: Veg Wrap + Iced Tea,Combos,159,70,0.67,Vegan,true
-15,Combo 5: 2 Veg Burgers + 1 Large Fries + Coke,Combos,349,165,0.77,Spicy,true
-16,Item 16 Beverages,Beverages,63,30,0.17,Sweet,true
-17,Item 17 Beverages,Beverages,201,95,0.40,Sweet,true
-18,Item 18 Desserts,Desserts,159,67,0.89,Cold,false
-19,Item 19 Starters,Starters,198,40,0.44,Hot,false
-20,Item 20 Desserts,Desserts,202,104,0.22,Cold,false
-21,Item 21 Beverages,Beverages,194,72,0.28,Sweet,true
-22,Item 22 Desserts,Desserts,176,110,0.50,Hot,true
-23,Item 23 Beverages,Beverages,66,37,0.87,Cheesy,true
-24,Item 24 Beverages,Beverages,104,64,0.46,Cheesy,true
-25,Item 25 Desserts,Desserts,121,87,0.27,Sweet,true
-26,Item 26 Main Course,Main Course,226,75,0.53,Cheesy,false
-27,Item 27 Main Course,Main Course,346,127,0.37,Cheesy,false
-28,Item 28 Main Course,Main Course,132,82,0.53,Cold,true
-29,Item 29 Desserts,Desserts,197,86,0.76,Sweet,true
-30,Item 30 Main Course,Main Course,121,76,0.58,Sweet,false
-31,Item 31 Beverages,Beverages,285,69,0.20,Vegan,false
-32,Item 32 Beverages,Beverages,177,62,0.52,Cold,false
-33,Item 33 Starters,Starters,243,105,0.85,Cheesy,false
-34,Item 34 Main Course,Main Course,292,118,0.61,Cold,true
-35,Item 35 Main Course,Main Course,63,38,0.77,Vegan,false
-36,Item 36 Main Course,Main Course,319,101,0.26,Vegan,true
-37,Item 37 Main Course,Main Course,176,46,0.74,Cold,false
-38,Item 38 Beverages,Beverages,160,90,0.43,Spicy,true
-39,Item 39 Beverages,Beverages,264,80,0.60,Cheesy,false
-40,Item 40 Beverages,Beverages,313,112,0.56,Vegan,true
-41,Item 41 Desserts,Desserts,284,70,0.16,Vegan,true
-42,Item 42 Desserts,Desserts,161,58,0.52,Spicy,false
-43,Item 43 Starters,Starters,293,85,0.15,Hot,true
-44,Item 44 Starters,Starters,277,120,0.51,Cold,true
-45,Item 45 Beverages,Beverages,193,45,0.14,Cheesy,false
-46,Item 46 Desserts,Desserts,257,41,0.61,Vegan,true
-47,Item 47 Desserts,Desserts,251,68,0.24,Spicy,false
-48,Item 48 Beverages,Beverages,103,47,0.74,Vegan,true
-49,Item 49 Main Course,Main Course,201,86,0.58,Cold,true
-50,Item 50 Starters,Starters,267,117,0.83,Hot,false
-51,Item 51 Main Course,Main Course,238,96,0.37,Hot,false
-52,Item 52 Beverages,Beverages,100,35,0.11,Hot,true
-53,Item 53 Main Course,Main Course,282,102,0.68,Hot,false
-54,Item 54 Main Course,Main Course,142,34,0.16,Vegan,false
-55,Item 55 Main Course,Main Course,162,103,0.55,Cheesy,false
-56,Item 56 Starters,Starters,200,69,0.75,Sweet,true
-57,Item 57 Desserts,Desserts,201,86,0.58,Vegan,true
-58,Item 58 Desserts,Desserts,256,107,0.67,Spicy,true
-59,Item 59 Starters,Starters,264,82,0.84,Cold,false
-60,Item 60 Desserts,Desserts,100,50,0.51,Hot,true
-61,Item 61 Main Course,Main Course,223,47,0.73,Cold,true
-62,Item 62 Starters,Starters,201,76,0.64,Sweet,false
-63,Item 63 Beverages,Beverages,212,128,0.17,Hot,true
-64,Item 64 Beverages,Beverages,138,51,0.57,Sweet,true
-65,Item 65 Desserts,Desserts,192,107,0.14,Vegan,true
-66,Item 66 Beverages,Beverages,211,88,0.48,Cheesy,false
-67,Item 67 Beverages,Beverages,249,111,0.56,Spicy,true
-68,Item 68 Starters,Starters,91,38,0.68,Vegan,true
-69,Item 69 Beverages,Beverages,211,88,0.89,Sweet,true
-70,Item 70 Beverages,Beverages,139,70,0.17,Vegan,true
-71,Item 71 Beverages,Beverages,256,103,0.38,Cheesy,true
-72,Item 72 Main Course,Main Course,131,103,0.68,Vegan,true
-73,Item 73 Starters,Starters,214,92,0.47,Spicy,true
-74,Item 74 Beverages,Beverages,212,92,0.70,Vegan,false
-75,Item 75 Desserts,Desserts,119,93,0.65,Vegan,false
-76,Item 76 Main Course,Main Course,266,118,0.34,Spicy,false
-77,Item 77 Main Course,Main Course,120,72,0.33,Spicy,true
-78,Item 78 Desserts,Desserts,260,97,0.61,Hot,true
-79,Item 79 Desserts,Desserts,199,88,0.12,Cold,false
-80,Item 80 Desserts,Desserts,221,119,0.38,Spicy,true
-81,Item 81 Desserts,Desserts,164,43,0.53,Sweet,false
-82,Item 82 Main Course,Main Course,173,77,0.30,Hot,true
-83,Item 83 Desserts,Desserts,215,63,0.45,Cold,true
-84,Item 84 Main Course,Main Course,136,89,0.83,Vegan,false
-85,Item 85 Beverages,Beverages,157,106,0.15,Cold,true
-86,Item 86 Beverages,Beverages,162,97,0.78,Spicy,true
-87,Item 87 Beverages,Beverages,172,122,0.75,Hot,true
-88,Item 88 Main Course,Main Course,123,94,0.44,Cheesy,true
-89,Item 89 Main Course,Main Course,155,69,0.64,Hot,true
-90,Item 90 Main Course,Main Course,264,48,0.59,Spicy,true
-91,Item 91 Starters,Starters,157,105,0.13,Vegan,true
-92,Item 92 Beverages,Beverages,308,119,0.88,Sweet,true
-93,Item 93 Starters,Starters,161,127,0.38,Hot,false
-94,Item 94 Beverages,Beverages,252,98,0.29,Cold,true
-95,Item 95 Main Course,Main Course,160,72,0.70,Spicy,true
-96,Item 96 Beverages,Beverages,165,35,0.24,Spicy,true
-97,Item 97 Main Course,Main Course,175,104,0.50,Cold,false
-98,Item 98 Beverages,Beverages,216,105,0.16,Spicy,true
-99,Item 99 Starters,Starters,198,118,0.89,Sweet,true
-100,Item 100 Starters,Starters,129,73,0.11,Cold,true
-101,Item 101 Beverages,Beverages,95,70,0.31,Sweet,true
-102,Item 102 Starters,Starters,198,104,0.32,Sweet,false
-103,Item 103 Desserts,Desserts,250,81,0.68,Sweet,true
-104,Item 104 Beverages,Beverages,264,74,0.50,Spicy,false
-105,Item 105 Desserts,Desserts,156,74,0.32,Cold,true
-106,Item 106 Desserts,Desserts,219,37,0.75,Cheesy,false
-107,Item 107 Starters,Starters,243,68,0.60,Spicy,true
-108,Item 108 Main Course,Main Course,212,43,0.19,Hot,true
-109,Item 109 Desserts,Desserts,316,97,0.53,Sweet,false
-110,Item 110 Main Course,Main Course,167,36,0.27,Cold,true
-111,Item 111 Beverages,Beverages,225,70,0.84,Spicy,true
-112,Item 112 Main Course,Main Course,231,54,0.59,Spicy,true
-113,Item 113 Starters,Starters,201,44,0.53,Spicy,true
-114,Item 114 Starters,Starters,166,66,0.20,Sweet,true
-115,Item 115 Beverages,Beverages,139,91,0.27,Sweet,false
-116,Item 116 Starters,Starters,285,71,0.28,Sweet,false
-117,Item 117 Starters,Starters,206,35,0.20,Hot,true
-118,Item 118 Main Course,Main Course,193,71,0.18,Cheesy,true
-119,Item 119 Desserts,Desserts,158,112,0.14,Sweet,false
-120,Item 120 Beverages,Beverages,133,107,0.54,Cheesy,false
-121,Item 121 Beverages,Beverages,164,94,0.82,Spicy,true
-122,Item 122 Beverages,Beverages,63,34,0.32,Vegan,false
-123,Item 123 Starters,Starters,159,39,0.84,Sweet,true
-124,Item 124 Main Course,Main Course,94,45,0.76,Sweet,true
-125,Item 125 Main Course,Main Course,124,35,0.79,Vegan,true
-126,Item 126 Beverages,Beverages,255,96,0.64,Cold,false
-127,Item 127 Desserts,Desserts,67,43,0.74,Hot,true
-128,Item 128 Beverages,Beverages,273,109,0.61,Spicy,true
-129,Item 129 Beverages,Beverages,91,41,0.20,Hot,true
-130,Item 130 Main Course,Main Course,165,36,0.78,Spicy,false
-131,Item 131 Main Course,Main Course,230,36,0.27,Hot,true
-132,Item 132 Beverages,Beverages,222,85,0.78,Hot,false
-133,Item 133 Starters,Starters,87,34,0.24,Cold,true
-134,Item 134 Starters,Starters,294,79,0.55,Sweet,true
-135,Item 135 Starters,Starters,256,116,0.30,Cheesy,false
-136,Item 136 Beverages,Beverages,222,104,0.79,Sweet,true
-137,Item 137 Desserts,Desserts,286,98,0.70,Cheesy,true
-138,Item 138 Main Course,Main Course,243,124,0.65,Hot,false
-139,Item 139 Beverages,Beverages,126,41,0.57,Spicy,false
-140,Item 140 Desserts,Desserts,199,107,0.19,Cheesy,true
-141,Item 141 Main Course,Main Course,264,61,0.14,Spicy,false
-142,Item 142 Starters,Starters,257,41,0.31,Spicy,false
-143,Item 143 Starters,Starters,252,115,0.58,Vegan,true
-144,Item 144 Starters,Starters,152,111,0.76,Hot,true
-145,Item 145 Desserts,Desserts,100,61,0.86,Cheesy,false
-146,Item 146 Main Course,Main Course,290,129,0.21,Cheesy,false
-147,Item 147 Starters,Starters,213,40,0.38,Spicy,false
-148,Item 148 Starters,Starters,310,124,0.75,Hot,false
-149,Item 149 Main Course,Main Course,220,110,0.90,Cold,true
-150,Item 150 Beverages,Beverages,190,84,0.88,Vegan,true
+1,Vada Pav,Starters,40,15,0.91,Spicy,true
+2,Pav Bhaji,Main Course,140,60,0.88,Spicy,true
+3,Misal Pav,Starters,130,55,0.86,Spicy,true
+4,Masala Fries,Sides,90,30,0.84,Hot,true
+5,Mango Lassi,Beverages,120,45,0.83,Sweet,true
+6,Garlic Naan,Starters,110,40,0.81,Hot,true
+7,Lemon Soda,Beverages,70,20,0.80,Tangy,true
+8,Cold Coffee,Beverages,140,50,0.87,Cold,true
+9,Veg Kathi Roll,Starters,120,45,0.85,Spicy,true
+10,Iced Lemon Tea,Beverages,100,35,0.79,Cold,true
+11,Paneer Burger Combo,Combos,199,105,0.82,Hot,true
+12,Pizza Garlic Bread Combo,Combos,299,180,0.78,Cheesy,true
+13,Fries Coffee Combo,Combos,149,70,0.80,Hot,true
+14,Wrap Iced Tea Combo,Combos,159,70,0.77,Cold,true
+15,Burger Fries Coke Combo,Combos,349,165,0.83,Spicy,true
+16,Masala Chaas,Beverages,60,20,0.75,Cold,true
+17,Strawberry Milkshake,Beverages,160,60,0.74,Sweet,true
+18,Gulab Jamun,Desserts,120,50,0.90,Sweet,true
+19,Chicken Seekh Kebab,Starters,220,100,0.82,Spicy,false
+20,Rasmalai,Desserts,140,60,0.85,Sweet,true
+21,Chocolate Milkshake,Beverages,170,70,0.81,Sweet,true
+22,Ice Cream Sundae,Desserts,160,70,0.79,Sweet,true
+23,Buttermilk,Beverages,50,15,0.84,Cold,true
+24,Orange Juice,Beverages,120,45,0.77,Sweet,true
+25,Kaju Katli,Desserts,200,100,0.88,Sweet,true
+26,Chicken Biryani,Main Course,260,120,0.91,Spicy,false
+27,Mutton Biryani,Main Course,320,160,0.87,Spicy,false
+28,Paneer Butter Masala,Main Course,240,110,0.89,Cheesy,true
+29,Chocolate Brownie,Desserts,180,80,0.83,Sweet,true
+30,Butter Chicken,Main Course,300,150,0.92,Cheesy,false
+31,Chicken Shawarma,Beverages,190,80,0.88,Spicy,false
+32,Vanilla Milkshake,Beverages,150,60,0.80,Sweet,true
+33,Paneer Tikka,Starters,230,100,0.86,Spicy,true
+34,Veg Pulao,Main Course,180,70,0.78,Spicy,true
+35,Aloo Paratha,Main Course,90,35,0.82,Hot,true
+36,Chicken Curry,Main Course,260,120,0.84,Spicy,false
+37,Fish Curry,Main Course,280,140,0.79,Spicy,false
+38,Masala Soda,Beverages,80,25,0.76,Tangy,true
+39,Lemon Mint Cooler,Beverages,110,40,0.77,Cold,true
+40,Pineapple Juice,Beverages,130,45,0.81,Sweet,true
+41,Carrot Halwa,Desserts,170,80,0.85,Sweet,true
+42,Chocolate Cake,Desserts,220,100,0.86,Sweet,true
+43,Spring Rolls,Starters,180,70,0.83,Hot,true
+44,Cheese Balls,Starters,190,75,0.84,Cheesy,true
+45,Iced Latte,Beverages,150,60,0.80,Cold,true
+46,Kulfi,Desserts,120,50,0.82,Sweet,true
+47,Strawberry Cheesecake,Desserts,240,110,0.85,Sweet,true
+48,Green Tea,Beverages,90,30,0.73,Hot,true
+49,Fried Rice,Main Course,170,65,0.80,Spicy,true
+50,Chicken Fried Rice,Main Course,210,95,0.82,Spicy,false
+51,Hakka Noodles,Main Course,180,70,0.81,Spicy,true
+52,Chicken Noodles,Main Course,220,100,0.84,Spicy,false
+53,Manchurian Balls,Main Course,190,80,0.83,Spicy,true
+54,Chicken Manchurian,Main Course,240,110,0.86,Spicy,false
+55,Paneer Fried Rice,Main Course,200,90,0.82,Spicy,true
+56,Aloo Tikki,Starters,100,40,0.87,Spicy,true
+57,Chocolate Ice Cream,Desserts,120,50,0.83,Sweet,true
+58,Vanilla Ice Cream,Desserts,110,45,0.82,Sweet,true
+59,Strawberry Ice Cream,Desserts,120,50,0.80,Sweet,true
+60,Black Forest Cake,Desserts,230,110,0.86,Sweet,true
+61,Red Velvet Cake,Desserts,250,120,0.87,Sweet,true
+62,Tiramisu,Desserts,260,130,0.84,Sweet,true
+63,Espresso,Beverages,120,45,0.78,Hot,true
+64,Cappuccino,Beverages,150,60,0.80,Hot,true
+65,Latte,Beverages,150,60,0.81,Hot,true
+66,Mocha,Beverages,160,65,0.82,Hot,true
+67,Hot Chocolate,Beverages,170,70,0.85,Sweet,true
+68,Nachos,Starters,180,80,0.83,Cheesy,true
+69,Cheese Nachos,Starters,200,90,0.84,Cheesy,true
+70,Onion Rings,Starters,160,70,0.82,Hot,true
+71,Loaded Fries,Sides,190,80,0.85,Cheesy,true
+72,Cheese Garlic Bread,Starters,180,75,0.87,Cheesy,true
+73,Paneer Wrap,Starters,170,70,0.83,Spicy,true
+74,Chicken Wrap,Starters,190,80,0.84,Spicy,false
+75,Falafel Wrap,Starters,180,70,0.86,Vegan,true
+76,Hummus Pita Plate,Starters,200,90,0.85,Vegan,true
+77,Chicken Kabab,Starters,230,110,0.88,Spicy,false
+78,Grilled Chicken,Main Course,280,130,0.89,Spicy,false
+79,Lamb Kabsa,Main Course,340,170,0.87,Spicy,false
+80,Lamb Mandi,Main Course,360,180,0.88,Spicy,false
+81,Knafeh,Desserts,220,100,0.83,Sweet,true
+82,Baklava,Desserts,240,120,0.86,Sweet,true
+83,Arabic Coffee,Beverages,130,50,0.78,Hot,true
+84,Date Milkshake,Beverages,160,65,0.81,Sweet,true
+85,Watermelon Juice,Beverages,120,40,0.82,Cold,true
+86,Apple Juice,Beverages,130,45,0.80,Sweet,true
+87,Kiwi Smoothie,Beverages,180,75,0.84,Cold,true
+88,Berry Smoothie,Beverages,190,80,0.85,Cold,true
+89,Chocolate Smoothie,Beverages,200,90,0.86,Sweet,true
+90,Mango Smoothie,Beverages,180,75,0.84,Sweet,true
+91,Paneer Pakora,Starters,180,70,0.83,Hot,true
+92,Chicken Pakora,Starters,200,90,0.84,Hot,false
+93,Aloo Pakora,Starters,140,55,0.82,Hot,true
+94,Bread Pakora,Starters,150,60,0.83,Hot,true
+95,Vegetable Cutlet,Starters,130,50,0.81,Hot,true
+96,Chicken Cutlet,Starters,170,70,0.84,Hot,false
+97,Paneer Sandwich,Starters,150,60,0.82,Cheesy,true
+98,Chicken Sandwich,Starters,170,70,0.83,Hot,false
+99,Club Sandwich,Starters,200,90,0.85,Hot,false
+100,Veg Sandwich,Starters,120,45,0.80,Light,true
+101,Tomato Soup,Starters,120,50,0.82,Hot,true
+102,Sweet Corn Soup,Starters,130,55,0.83,Hot,true
+103,Chicken Soup,Starters,150,65,0.84,Hot,false
+104,Hot Sour Soup,Starters,140,60,0.83,Spicy,true
+105,Minestrone Soup,Starters,150,65,0.81,Hot,true
+106,Pasta Alfredo,Main Course,240,110,0.86,Cheesy,true
+107,Pasta Arrabiata,Main Course,220,100,0.84,Spicy,true
+108,Chicken Alfredo Pasta,Main Course,260,120,0.88,Cheesy,false
+109,Lasagna,Main Course,280,130,0.87,Cheesy,true
+110,Chicken Lasagna,Main Course,300,150,0.88,Cheesy,false
+111,Margherita Pizza,Main Course,250,120,0.90,Cheesy,true
+112,Farmhouse Pizza,Main Course,280,140,0.88,Cheesy,true
+113,Chicken Pizza,Main Course,300,150,0.89,Cheesy,false
+114,BBQ Chicken Pizza,Main Course,320,160,0.91,Spicy,false
+115,Paneer Tikka Pizza,Main Course,290,140,0.89,Cheesy,true
+116,Chocolate Donut,Desserts,120,50,0.83,Sweet,true
+117,Sugar Donut,Desserts,110,45,0.81,Sweet,true
+118,Strawberry Donut,Desserts,130,55,0.82,Sweet,true
+119,Blueberry Muffin,Desserts,140,60,0.84,Sweet,true
+120,Chocolate Muffin,Desserts,140,60,0.85,Sweet,true
+121,Banana Muffin,Desserts,130,55,0.82,Sweet,true
+122,Caramel Pudding,Desserts,150,65,0.83,Sweet,true
+123,Chocolate Pudding,Desserts,160,70,0.84,Sweet,true
+124,Vanilla Pudding,Desserts,140,60,0.81,Sweet,true
+125,Strawberry Pudding,Desserts,150,65,0.82,Sweet,true
+126,Oreo Shake,Beverages,180,75,0.86,Sweet,true
+127,Kitkat Shake,Beverages,190,80,0.87,Sweet,true
+128,Chocolate Oreo Shake,Beverages,200,90,0.88,Sweet,true
+129,Banana Shake,Beverages,140,55,0.82,Sweet,true
+130,Chikoo Shake,Beverages,150,60,0.81,Sweet,true
+131,Almond Milkshake,Beverages,180,75,0.84,Sweet,true
+132,Pista Milkshake,Beverages,180,75,0.84,Sweet,true
+133,Roasted Corn,Sides,90,35,0.83,Hot,true
+134,Cheese Corn,Sides,120,50,0.85,Cheesy,true
+135,Butter Corn,Sides,110,45,0.84,Hot,true
+136,Spicy Corn,Sides,110,45,0.83,Spicy,true
+137,Chocolate Waffle,Desserts,200,90,0.86,Sweet,true
+138,Strawberry Waffle,Desserts,210,95,0.87,Sweet,true
+139,Blueberry Waffle,Desserts,220,100,0.88,Sweet,true
+140,Caramel Waffle,Desserts,210,95,0.86,Sweet,true
+141,Nutella Waffle,Desserts,230,110,0.89,Sweet,true
+142,Classic Pancakes,Desserts,200,90,0.85,Sweet,true
+143,Chocolate Pancakes,Desserts,220,100,0.87,Sweet,true
+144,Blueberry Pancakes,Desserts,230,110,0.88,Sweet,true
+145,Strawberry Pancakes,Desserts,220,100,0.87,Sweet,true
+146,Caramel Pancakes,Desserts,210,95,0.86,Sweet,true
+147,Nutella Pancakes,Desserts,240,110,0.90,Sweet,true
+148,Chocolate Croissant,Desserts,180,80,0.84,Sweet,true
+149,Butter Croissant,Desserts,160,70,0.83,Light,true
+150,Almond Croissant,Desserts,190,85,0.85,Sweet,true

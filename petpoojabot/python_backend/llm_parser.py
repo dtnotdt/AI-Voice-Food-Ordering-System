@@ -27,25 +27,26 @@ class LLMParser:
     def _create_system_prompt(self):
         # Provide sample of menu to guide LLM but rely on SemanticMenuMatcher for fuzzy ID resolution
         return """
-        You are a highly accurate restaurant ordering AI assistant. 
-        Your task is to parse a user's transcript (translated to English if necessary) into a strict JSON command structure.
+        You are a highly accurate, multilingual restaurant ordering AI assistant. 
+        Your task is to parse a user's transcript (which may be in English, Hindi, Gujarati, Marathi, Tamil, Malayalam, Arabic, or transliterated code-mixed formats) into a strict JSON command structure.
         
         SUPPORTED INTENTS:
-        - add_to_cart: User wants to order food. (e.g. "Add two burgers")
-        - remove_item: User wants to remove food from the order. (e.g. "Remove coke")
-        - modify_quantity: User wants to change the amount of an item. (e.g. "Make the pizza 3 instead of 2")
-        - menu_query: User is asking about what's available. (e.g. "What drinks do you have?")
-        - order_checkout: User wants to checkout/pay. (e.g. "Place the order")
+        - add_to_cart: User wants to order food. (e.g. "Add two burgers", "ek paneer pizza de do", "rendu dosai venum")
+        - remove_item: User wants to remove food. (e.g. "Remove coke", "ye hatao")
+        - modify_quantity: User wants to change the amount of an item. 
+        - menu_query: User is asking about what's available. 
+        - order_checkout: User wants to checkout/pay. 
         - cancel_order: User wants to cancel everything.
-        - set_address: User is providing a delivery address. (e.g. "Deliver it to PG Sector 14")
+        - set_address: User is providing a delivery address.
         - unknown: Cannot understand intent.
         
         RULES:
-        1. Always extract the item 'name', 'quantity' (integer), and 'instructions' (e.g. "extra onions", "less spicy") if the intent involves adding, modifying, or removing items.
-        2. If the user refers to an item by its number (e.g. "item number 5"), extract "item #5" as the name.
-        3. Do not invent intents outside of the list.
-        4. Provide the result strictly matching the provided JSON schema.
-        5. If the intent is set_address, store the full address string in the 'address' field.
+        1. Always extract the item 'name', 'quantity' (integer).
+        2. CRITICAL: Any special instructions, modifiers, or negative constraints (e.g., "extra onions", "less spicy", "bina mayo", "no cheese", "without ice", "medium cooked", "jain", "spicy") MUST be extracted entirely into the 'instructions' field. Do not include these in the 'name'.
+        3. Even if the text is in Roman Hindi or Tamil slang, parse the intent correctly and map the core action.
+        4. If the user refers to an item by its number (e.g. "item number 5"), extract "item #5" as the name.
+        5. Provide the result strictly matching the provided JSON schema.
+        6. If the intent is set_address, store the full address string in the 'address' field.
         """
 
     def parse_intent(self, text: str) -> dict:
@@ -58,7 +59,9 @@ class LLMParser:
             "itemData": None,
             "search_query": text,
             "instructions": None,
-            "category": None
+            "category": None,
+            "needs_clarification": False,
+            "alternatives": []
         }
         
         if not client:
@@ -105,6 +108,8 @@ class LLMParser:
                     legacy_intent['search_query'] = sm_result['item']['name']
                     legacy_intent['match_score'] = sm_result['score']
                     legacy_intent['match_method'] = sm_result['method']
+                    legacy_intent['needs_clarification'] = sm_result.get('needs_clarification', False)
+                    legacy_intent['alternatives'] = sm_result.get('alternatives', [])
                     print(f"🗑️ LOCAL Remove Resolved: {sm_result['item']['name']} (score: {sm_result['score']:.2f})")
             elif is_add:
                 legacy_intent["action"] = "add"
@@ -116,21 +121,46 @@ class LLMParser:
                     legacy_intent['search_query'] = sm_result['item']['name']
                     legacy_intent['match_score'] = sm_result['score']
                     legacy_intent['match_method'] = sm_result['method']
+                    legacy_intent['needs_clarification'] = sm_result.get('needs_clarification', False)
+                    legacy_intent['alternatives'] = sm_result.get('alternatives', [])
                     print(f"🎯 LOCAL Add Resolved: {sm_result['item']['name']} (qty: {legacy_intent['quantity']}, score: {sm_result['score']:.2f})")
             elif is_checkout:
                 legacy_intent["action"] = "checkout"
-            else:
-                # Default: try to match as an add (user might just say the item name)
-                sm_result = smart_matcher.match(text)
-                if sm_result and sm_result['score'] >= 0.6:
-                    legacy_intent["action"] = "add"
-                    legacy_intent["quantity"] = parse_quantity(text)
-                    legacy_intent['item_id'] = int(sm_result['item']['id'])
-                    legacy_intent['itemData'] = sm_result['item']
-                    legacy_intent['search_query'] = sm_result['item']['name']
-                    legacy_intent['match_score'] = sm_result['score']
-                    legacy_intent['match_method'] = sm_result['method']
-                    print(f"🎯 LOCAL Implicit Add: {sm_result['item']['name']} (score: {sm_result['score']:.2f})")
+            # ── Quantity-prefix implicit add: 'one misal pav', 'ek misal', '2 dosa' etc. ──
+            # This is a key fix: quantity words before an item name mean 'add' even without 'add' keyword
+            QUANTITY_TRIGGER_WORDS = [
+                # English
+                "one ", "two ", "three ", "four ", "five ", "six ", "seven ", "eight ", "nine ", "ten ",
+                "a ", "an ", "1 ", "2 ", "3 ", "4 ", "5 ",
+                # Hindi romanized
+                "ek ", "do ", "char ", "paanch ", "teen ",
+                # Gujarati romanized
+                "ek ", "be ",
+                # Tamil
+                "onru ", "irantu ", "rendu ", "oru ",
+                # Malayalam
+                "onnu ", "randu ",
+                # Arabic
+                "wahid ", "ithnayn ",
+            ]
+            has_quantity_word = any(t.startswith(kw) for kw in QUANTITY_TRIGGER_WORDS)
+            
+            if not is_add and not is_remove and not is_checkout and has_quantity_word:
+                is_add = True
+                
+            # Default: try to match as an add (user might just say the item name)
+            sm_result = smart_matcher.match(text)
+            if sm_result and sm_result['score'] >= 0.45:
+                legacy_intent["action"] = "add"
+                legacy_intent["quantity"] = parse_quantity(text)
+                legacy_intent['item_id'] = int(sm_result['item']['id'])
+                legacy_intent['itemData'] = sm_result['item']
+                legacy_intent['search_query'] = sm_result['item']['name']
+                legacy_intent['match_score'] = sm_result['score']
+                legacy_intent['match_method'] = sm_result['method']
+                legacy_intent['needs_clarification'] = sm_result.get('needs_clarification', False)
+                legacy_intent['alternatives'] = sm_result.get('alternatives', [])
+                print(f"🎯 LOCAL Implicit Add: {sm_result['item']['name']} (score: {sm_result['score']:.2f})")
                 
             return legacy_intent
             
@@ -156,7 +186,9 @@ class LLMParser:
                 "itemData": None,
                 "search_query": text,
                 "instructions": None,
-                "category": None
+                "category": None,
+                "needs_clarification": False,
+                "alternatives": []
             }
             
             # Map new schema to expected API structure
@@ -190,6 +222,8 @@ class LLMParser:
                     legacy_intent['search_query'] = first_item.name
                     legacy_intent['match_score'] = sm_result['score']
                     legacy_intent['match_method'] = sm_result['method']
+                    legacy_intent['needs_clarification'] = sm_result.get('needs_clarification', False)
+                    legacy_intent['alternatives'] = sm_result.get('alternatives', [])
                     print(f"🎯 LLM SmartMatch Resolved: {sm_result['item']['name']} (ID: {legacy_intent['item_id']}, score: {sm_result['score']:.2f})")
                     
             return legacy_intent
@@ -201,23 +235,31 @@ class LLMParser:
             t = text.lower()
             original_text = text
             
-            remove_keywords_en = ["remove", "cancel", "delete"]
-            remove_keywords_hi = ["हटाओ", "हटा", "निकालो", "कार्ट से हटाओ", "हटा दो"]
-            remove_keywords_hi_roman = ["hatao", "hata", "nikalo", "cart se hatao", "hata do"]
+            remove_keywords_en = ["remove", "cancel", "delete", "drop", "take out"]
+            remove_keywords_hi = ["हटाओ", "हटा", "निकालो", "कार्ट से हटाओ", "हटा दो", "मत"]
+            remove_keywords_hi_roman = ["hatao", "hata", "nikalo", "cart se hatao", "hata do", "cancel karo"]
             remove_keywords_gu = ["કાઢો", "કાઢી", "કાર્ટમાંથી કાઢો", "દૂર કરો"]
             remove_keywords_gu_roman = ["kadho", "kadhi", "door karo"]
+            remove_keywords_mar = ["kadhun taka", "nako", "kadha"]
+            remove_keywords_tam = ["venda", "remove", "eduthiru", "vendam"]
+            remove_keywords_mal = ["venda", "maattu", "ozhivaakku"]
+            remove_keywords_ara = ["izala", "ilgha", "la urid"]
             
-            is_remove = any(k in t for k in remove_keywords_en + remove_keywords_hi_roman + remove_keywords_gu_roman)
+            is_remove = any(k in t for k in remove_keywords_en + remove_keywords_hi_roman + remove_keywords_gu_roman + remove_keywords_mar + remove_keywords_tam + remove_keywords_mal + remove_keywords_ara)
             if not is_remove:
                 is_remove = any(k in original_text for k in remove_keywords_hi + remove_keywords_gu)
             
-            add_keywords_en = ["add", "want", "give me", "order", "get"]
+            add_keywords_en = ["add", "want", "give me", "order", "get", "include"]
             add_keywords_hi = ["चाहिए", "दो", "दे", "डालो", "लगाओ", "ऐड"]
             add_keywords_hi_roman = ["chahiye", "daal do", "de do", "dena", "lagao", "add karo", "daal", "dal do"]
             add_keywords_gu = ["આપો", "ઉમેરો", "નાખો", "જોઈએ"]
             add_keywords_gu_roman = ["aapo", "umero", "nakho", "joie"]
+            add_keywords_mar = ["pahije", "dya", "de", "kara", "ghya"]
+            add_keywords_tam = ["venum", "kudu", "vei", "podu"]
+            add_keywords_mal = ["venam", "tharu"]
+            add_keywords_ara = ["uridu", "aetini", "wahid"]
             
-            is_add = any(k in t for k in add_keywords_en + add_keywords_hi_roman + add_keywords_gu_roman)
+            is_add = any(k in t for k in add_keywords_en + add_keywords_hi_roman + add_keywords_gu_roman + add_keywords_mar + add_keywords_tam + add_keywords_mal + add_keywords_ara)
             if not is_add:
                 is_add = any(k in original_text for k in add_keywords_hi + add_keywords_gu)
             
@@ -229,7 +271,8 @@ class LLMParser:
             
             fallback = {
                 "action": "unknown", "quantity": 1, "item_id": None,
-                "itemData": None, "search_query": text, "instructions": None, "category": None
+                "itemData": None, "search_query": text, "instructions": None, "category": None,
+                "needs_clarification": False, "alternatives": []
             }
             
             if is_remove:
@@ -241,6 +284,8 @@ class LLMParser:
                     fallback['search_query'] = sm_result['item']['name']
                     fallback['match_score'] = sm_result['score']
                     fallback['match_method'] = sm_result['method']
+                    fallback['needs_clarification'] = sm_result.get('needs_clarification', False)
+                    fallback['alternatives'] = sm_result.get('alternatives', [])
                     print(f"🗑️ FALLBACK Remove: {sm_result['item']['name']} (score: {sm_result['score']:.2f})")
             elif is_add:
                 fallback["action"] = "add"
@@ -252,12 +297,19 @@ class LLMParser:
                     fallback['search_query'] = sm_result['item']['name']
                     fallback['match_score'] = sm_result['score']
                     fallback['match_method'] = sm_result['method']
+                    fallback['needs_clarification'] = sm_result.get('needs_clarification', False)
+                    fallback['alternatives'] = sm_result.get('alternatives', [])
                     print(f"🎯 FALLBACK Add: {sm_result['item']['name']} (qty: {fallback['quantity']}, score: {sm_result['score']:.2f})")
             elif is_checkout:
                 fallback["action"] = "checkout"
             else:
+                QUANTITY_TRIGGER_WORDS = [
+                    "one ", "two ", "three ", "a ", "an ", "1 ", "2 ", "3 ", "4 ", "5 ",
+                    "ek ", "do ", "char ", "oru ", "rendu ", "wahid ",
+                ]
+                has_quantity_word = any(t.startswith(kw) for kw in QUANTITY_TRIGGER_WORDS)
                 sm_result = smart_matcher.match(text)
-                if sm_result and sm_result['score'] >= 0.6:
+                if sm_result and sm_result['score'] >= 0.45:
                     fallback["action"] = "add"
                     fallback["quantity"] = parse_quantity(text)
                     fallback['item_id'] = int(sm_result['item']['id'])
@@ -265,6 +317,8 @@ class LLMParser:
                     fallback['search_query'] = sm_result['item']['name']
                     fallback['match_score'] = sm_result['score']
                     fallback['match_method'] = sm_result['method']
+                    fallback['needs_clarification'] = sm_result.get('needs_clarification', False)
+                    fallback['alternatives'] = sm_result.get('alternatives', [])
                     print(f"🎯 FALLBACK Implicit Add: {sm_result['item']['name']} (score: {sm_result['score']:.2f})")
             
             return fallback

@@ -1,9 +1,54 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from pydantic import BaseModel
+from sqlalchemy.orm import Session
+import re
+from database import SessionLocal, Customer, Order, OrderItem, User, Session as DBSession, Message, VoiceMetadata, AiLog, ErrorLog, LanguagePreference, OTPRecord, engine, Base
+import uuid
+import time
+from datetime import timedelta
+from otp_service import OTPService
+import random
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="PetpoojaBot Cognitive Engine", version="7.0.0")
+
+# Dependency to get database session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Pydantic Models
+class LoginRequest(BaseModel):
+    phone_number: str
+    name: str = None
+
+class LoginResponse(BaseModel):
+    customer_id: int
+    phone_number: str
+    name: str = None
+    is_new_customer: bool
+
+class OrderItemResponse(BaseModel):
+    item_name: str
+    quantity: int
+    price: float
+
+class OrderHistoryResponse(BaseModel):
+    order_id: int
+    order_date: str
+    status: str
+    items: list[OrderItemResponse]
+    total_price: float
+
+class OrderHistoryList(BaseModel):
+    phone_number: str
+    orders: list[OrderHistoryResponse]
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,6 +61,341 @@ app.add_middleware(
 @app.get("/health")
 def health_check():
     return {"status": "online", "service": "PetpoojaBot Cognitive Engine"}
+
+@app.get("/health/db")
+def health_check_db(db: Session = Depends(get_db)):
+    """Health check endpoint to verify database connectivity and schema."""
+    try:
+        # Check if users table is accessible
+        count = db.query(User).count()
+        return {
+            "status": "online",
+            "database": "connected",
+            "users_count": count,
+            "message": "Database connected successfully and tables validated."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "database": "disconnected",
+            "error": str(e)
+        }
+
+@app.get("/health/openai")
+def health_check_openai():
+    """Health check for OpenAI API key presence and client initialization."""
+    import os
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    
+    if not api_key:
+        return {
+            "status": "unconfigured",
+            "api_key_present": False,
+            "message": "OPENAI_API_KEY environment variable is not set. The bot will use local fallback regex parser only.",
+            "required_action": "Set OPENAI_API_KEY=sk-... in python_backend/.env"
+        }
+    
+    # Test client initialization
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        
+        # Quick ping — cheapest possible call
+        models = client.models.list()
+        model_names = [m.id for m in models.data[:3]]
+        return {
+            "status": "ok",
+            "api_key_present": True,
+            "api_key_prefix": api_key[:8] + "...",
+            "sample_models": model_names,
+            "message": "OpenAI API is connected and working correctly."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "api_key_present": True,
+            "api_key_prefix": api_key[:8] + "...",
+            "error": str(e),
+            "message": "OpenAI API key is set but the connection failed. Check if the key is valid."
+        }
+
+
+class AuthRequest(BaseModel):
+    full_name: str
+    phone_number: str
+    email_id: str
+    verification_method: str  # "phone" or "email"
+
+class VerifyRequest(BaseModel):
+    contact_value: str
+    otp: str
+
+@app.get("/health/otp")
+def health_check_otp():
+    """Returns the current status of all OTP delivery providers."""
+    return OTPService.check_providers()
+
+@app.post("/api/auth/request-otp")
+def request_otp(request: AuthRequest, db: Session = Depends(get_db)):
+    """Request an OTP. Returns truthful delivery status. Never lies about delivery."""
+    from datetime import datetime
+
+    # Validate method
+    if request.verification_method not in ["phone", "email"]:
+        raise HTTPException(status_code=400, detail="Invalid verification method. Use 'phone' or 'email'.")
+
+    # Normalize inputs
+    raw_phone = re.sub(r'[^\d+]', '', request.phone_number.strip())
+    raw_email = request.email_id.strip().lower()
+
+    # Validate phone
+    if request.verification_method == "phone":
+        if not re.match(r'^[+]?[\d]{10,15}$', raw_phone):
+            raise HTTPException(status_code=400, detail="Invalid phone number format. Must be 10-15 digits.")
+
+    # Validate email
+    if request.verification_method == "email":
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', raw_email):
+            raise HTTPException(status_code=400, detail="Invalid email address format.")
+
+    contact_val = raw_phone if request.verification_method == "phone" else raw_email
+
+    # ── Cooldown Check (60 seconds) ──────────────────────────────────────
+    recent = db.query(OTPRecord).filter(OTPRecord.contact_value == contact_val).first()
+    if recent and recent.last_sent_at:
+        elapsed = (datetime.utcnow() - recent.last_sent_at).total_seconds()
+        if elapsed < 60:
+            remaining = int(60 - elapsed)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Please wait {remaining} seconds before requesting a new OTP."
+            )
+
+    # ── Find or Create User ──────────────────────────────────────────────
+    user = db.query(User).filter(
+        (User.phone_email == raw_phone) | (User.phone_email == raw_email)
+    ).first()
+
+    if not user:
+        user_id = f"usr_{uuid.uuid4().hex[:8]}"
+        user = User(
+            user_id=user_id,
+            name=request.full_name,
+            phone_email=contact_val,
+            verification_method=request.verification_method
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        user.name = request.full_name
+        user.verification_method = request.verification_method
+        db.commit()
+
+    # ── Generate OTP ─────────────────────────────────────────────────────
+    otp_code = str(random.randint(100000, 999999))
+    expires  = datetime.utcnow() + timedelta(minutes=5)
+
+    # Invalidate old OTPs for this contact
+    db.query(OTPRecord).filter(OTPRecord.contact_value == contact_val).delete()
+
+    otp_record = OTPRecord(
+        user_id=user.user_id,
+        contact_value=contact_val,
+        otp_hash=otp_code,
+        expires_at=expires,
+        last_sent_at=datetime.utcnow()
+    )
+    db.add(otp_record)
+    db.commit()
+
+    # ── Send OTP (with truthful result) ──────────────────────────────────
+    fallback_email = raw_email if request.verification_method == "phone" and raw_email else None
+    result = OTPService.send_otp(
+        method=request.verification_method,
+        contact_value=contact_val,
+        otp=otp_code,
+        fallback_email=fallback_email
+    )
+
+    # Update delivery tracking in DB
+    otp_record.delivery_channel = result.channel
+    otp_record.delivery_status  = "sent" if result.success else "failed"
+    db.commit()
+
+    if not result.success:
+        # Truthfully surface the error — do NOT return 200 OK
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": result.message,
+                "provider_error": result.provider_error,
+                "action": "Please configure TWILIO or SMTP environment variables, or set APP_ENV=development for local testing."
+            }
+        )
+
+    # ── Build Response ────────────────────────────────────────────────────
+    response = {
+        "message": result.message,
+        "contact": contact_val,
+        "channel": result.channel,
+        "is_dev_fallback": result.is_dev_fallback,
+    }
+    # Include OTP in response ONLY in development fallback mode
+    if result.is_dev_fallback and result.dev_otp:
+        response["dev_otp"] = result.dev_otp
+        response["dev_notice"] = "⚠️ Development mode active. OTP shown here because no SMS/email provider is configured."
+
+    return response
+
+@app.post("/api/auth/verify-otp")
+def verify_otp(request: VerifyRequest, db: Session = Depends(get_db)):
+    """Verify an OTP. Returns truthful result with proper error reasons."""
+    from datetime import datetime
+
+    # Normalize contact value
+    contact_val = request.contact_value.strip()
+    if "@" not in contact_val:
+        contact_val = re.sub(r'[^\d+]', '', contact_val)
+
+    record = db.query(OTPRecord).filter(
+        OTPRecord.contact_value == contact_val
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=400, detail="No OTP requested for this contact. Please request a new OTP.")
+
+    if record.expires_at < datetime.utcnow():
+        db.delete(record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+
+    if record.attempt_count >= 5:
+        db.delete(record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="Too many failed attempts. Please request a new OTP.")
+
+    if record.otp_hash != request.otp.strip():
+        record.attempt_count += 1
+        remaining_attempts = 5 - record.attempt_count
+        db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Incorrect OTP. {remaining_attempts} attempt(s) remaining."
+        )
+
+    # ── Verification Success ──────────────────────────────────────────────
+    user = db.query(User).filter(User.user_id == record.user_id).first()
+    if user:
+        if "@" in contact_val:
+            user.email_verified = True
+        else:
+            user.phone_verified = True
+        db.commit()
+
+    db.delete(record)
+    db.commit()
+
+    return {
+        "message": "Verification successful",
+        "token": f"auth_{uuid.uuid4().hex}",
+        "user_id": user.user_id if user else None,
+        "verified": True
+    }
+
+@app.post("/api/login", response_model=LoginResponse)
+def login_customer(request: LoginRequest, db: Session = Depends(get_db)):
+    """Login or register customer using phone number."""
+    
+    # Validate phone number format (basic validation)
+    phone_pattern = r'^[+]?[\d\s\-\(\)]{10,15}$'
+    if not re.match(phone_pattern, request.phone_number):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    
+    # Clean phone number (remove spaces, dashes, parentheses)
+    clean_phone = re.sub(r'[^\d+]', '', request.phone_number)
+    
+    # Check if customer exists
+    customer = db.query(Customer).filter(Customer.phone_number == clean_phone).first()
+    
+    if customer:
+        # Existing customer
+        return LoginResponse(
+            customer_id=customer.id,
+            phone_number=customer.phone_number,
+            name=customer.name,
+            is_new_customer=False
+        )
+    else:
+        # Create new customer
+        new_customer = Customer(
+            phone_number=clean_phone,
+            name=request.name
+        )
+        db.add(new_customer)
+        db.commit()
+        db.refresh(new_customer)
+        
+        return LoginResponse(
+            customer_id=new_customer.id,
+            phone_number=new_customer.phone_number,
+            name=new_customer.name,
+            is_new_customer=True
+        )
+
+@app.get("/api/order-history/{phone_number}", response_model=OrderHistoryList)
+def get_order_history(phone_number: str, db: Session = Depends(get_db)):
+    """Get order history for a customer by phone number."""
+    
+    # Clean and validate phone number
+    clean_phone = re.sub(r'[^\d+]', '', phone_number)
+    phone_pattern = r'^[+]?[\d]{10,15}$'
+    if not re.match(phone_pattern, clean_phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    
+    # Find customer
+    customer = db.query(Customer).filter(Customer.phone_number == clean_phone).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Get orders with items, sorted by newest first
+    orders = db.query(Order).filter(
+        Order.customer_id == customer.id
+    ).order_by(Order.created_at.desc()).all()
+    
+    if not orders:
+        return OrderHistoryList(
+            phone_number=clean_phone,
+            orders=[]
+        )
+    
+    order_responses = []
+    for order in orders:
+        # Get order items
+        order_items = db.query(OrderItem).filter(OrderItem.order_id == order.id).all()
+        
+        items_response = [
+            OrderItemResponse(
+                item_name=item.item_name,
+                quantity=item.quantity,
+                price=item.price
+            )
+            for item in order_items
+        ]
+        
+        order_response = OrderHistoryResponse(
+            order_id=order.id,
+            order_date=order.created_at.isoformat(),
+            status=order.status,
+            items=items_response,
+            total_price=order.total_price
+        )
+        order_responses.append(order_response)
+    
+    return OrderHistoryList(
+        phone_number=clean_phone,
+        orders=order_responses
+    )
 
 from faiss_matcher import matcher
 from translator import translator
@@ -32,7 +412,19 @@ class TranscriptionRequest(BaseModel):
     text: str = None  # Allow direct text injection for testing without audio logic
 
 @app.post("/nlp/pipeline")
-async def execute_voice_pipeline(file: UploadFile = File(...), language: str = Form("en-IN")):
+async def execute_voice_pipeline(
+    file: UploadFile = File(...), 
+    language: str = Form("en-IN"),
+    session_id: str = Form(None),
+    user_id: str = Form(None),
+    db: Session = Depends(get_db)):
+    
+    start_time = time.time()
+    
+    # Context ID Management
+    if not user_id: user_id = f"usr_{uuid.uuid4().hex[:8]}"
+    if not session_id: session_id = f"sess_{uuid.uuid4().hex[:12]}"
+    
     # 1. Save audio to disk temporarily
     temp_audio_path = f"temp_req_{__import__('uuid').uuid4().hex[:6]}.wav"
     with open(temp_audio_path, "wb") as buffer:
@@ -81,20 +473,62 @@ async def execute_voice_pipeline(file: UploadFile = File(...), language: str = F
         # 6. Translate back to native language
         final_reply = translator.translate_from_english(base_reply, target_lang=language)
         
+        
+        elapsed = (time.time() - start_time) * 1000
+        
+        # --- DB Logging ---
+        try:
+            # 1. Track User
+            user = db.query(User).filter(User.user_id == user_id).first()
+            if not user:
+                user = User(user_id=user_id, preferred_language=language)
+                db.add(user)
+                
+            # 2. Track Session
+            session_rec = db.query(DBSession).filter(DBSession.session_id == session_id).first()
+            if not session_rec:
+                session_rec = DBSession(session_id=session_id, user_id=user_id, detected_language=language)
+                db.add(session_rec)
+                
+            # 3. Track User Message & AI Reply
+            user_msg = Message(message_id=f"msg_{uuid.uuid4().hex[:8]}", session_id=session_id, sender_type="user", 
+                               original_text=transcript, translated_text=english_text, language=language)
+            ai_msg = Message(message_id=f"msg_{uuid.uuid4().hex[:8]}", session_id=session_id, sender_type="assistant", 
+                             original_text=final_reply, translated_text=base_reply, language=language)
+            db.add(user_msg)
+            db.add(ai_msg)
+            
+            # 4. Track Voice & AI Logs
+            db.add(VoiceMetadata(audio_id=f"aud_{uuid.uuid4().hex[:8]}", session_id=session_id, 
+                                 input_audio=temp_audio_path, stt_status="success", tts_status="success"))
+            db.add(AiLog(log_id=f"log_{uuid.uuid4().hex[:8]}", session_id=session_id, model_used="whisper+llm", 
+                         prompt_type=intent_data.get("action"), response_status="success", latency=elapsed))
+            db.commit()
+        except Exception as log_e:
+            print(f"⚠️ DB Logging Error (Pipeline): {log_e}")
+            db.rollback()
+
         return {
             "transcript": transcript,
             "intent": intent_data,
-            "reply": final_reply
+            "reply": final_reply,
+            "session_id": session_id,
+            "user_id": user_id
         }
     except Exception as e:
         print(f"❌ Pipeline error: {e}")
+        try:
+            db.add(ErrorLog(error_id=f"err_{uuid.uuid4().hex[:8]}", session_id=session_id, 
+                            error_message=str(e), module_name="execute_voice_pipeline"))
+            db.commit()
+        except: pass
         return {"error": str(e), "reply": "There was an error."}
     finally:
         if __import__('os').path.exists(temp_audio_path):
             __import__('os').remove(temp_audio_path)
 
 @app.post("/nlp/transcribe")
-def process_nlp(request: TranscriptionRequest):
+def process_nlp(request: TranscriptionRequest, db: Session = Depends(get_db)):
     # This route stays purely for testing the text pathway from frontend UI
     text = request.text
     if not text:
@@ -145,6 +579,30 @@ def process_nlp(request: TranscriptionRequest):
     print(f"  📊 Final: action={intent_data.get('action')}, item={intent_data.get('itemData', {}).get('name', 'None')}, qty={intent_data.get('quantity', 1)}, score={intent_data.get('match_score', 'N/A')}")
     print(f"{'='*60}\n")
     
+    # --- DB Logging for Text Pathway ---
+    try:
+        user_id = f"usr_{uuid.uuid4().hex[:8]}"
+        session_id = f"sess_{uuid.uuid4().hex[:12]}"
+        
+        user = User(user_id=user_id, preferred_language=request.language)
+        session_rec = DBSession(session_id=session_id, user_id=user_id, detected_language=request.language)
+        db.add(user)
+        db.add(session_rec)
+        
+        user_msg = Message(message_id=f"msg_{uuid.uuid4().hex[:8]}", session_id=session_id, sender_type="user", 
+                           original_text=text, translated_text=english_text, language=request.language)
+                           
+        # We don't have a generated AI string directly here because this is just NLP transcription, 
+        # so we rely on the intent_data for logs.
+        db.add(user_msg)
+        
+        db.add(AiLog(log_id=f"log_{uuid.uuid4().hex[:8]}", session_id=session_id, model_used="llm_text_only", 
+                     prompt_type=intent_data.get("action"), response_status="success", latency=elapsed))
+        db.commit()
+    except Exception as log_e:
+        print(f"⚠️ DB Logging Error (Transcribe): {log_e}")
+        db.rollback()
+    
     return {"intent": intent_data}
 
 class MatchRequest(BaseModel):
@@ -178,19 +636,61 @@ class POSOrderRequest(BaseModel):
     items: list[dict]
     instructions: str = ""
     customer_language_pref: str = "en-IN"
+    phone_number: str = None  # Add phone number for customer identification
 
 @app.post("/pos/sync")
-def sync_pos_order(request: POSOrderRequest):
+def sync_pos_order(request: POSOrderRequest, db: Session = Depends(get_db)):
     # This simulates pushing the normalized JSON order into the restaurant's legacy POS
     print(f"📠 [POS SYNC] Received order for ₹{request.total_amount}")
+    
+    # Save to database if phone number is provided
+    db_order_id = None
+    if request.phone_number:
+        # Clean and validate phone number
+        clean_phone = re.sub(r'[^\d+]', '', request.phone_number)
+        phone_pattern = r'^[+]?[\d]{10,15}$'
+        if re.match(phone_pattern, clean_phone):
+            # Find or create customer
+            customer = db.query(Customer).filter(Customer.phone_number == clean_phone).first()
+            if not customer:
+                customer = Customer(phone_number=clean_phone)
+                db.add(customer)
+                db.commit()
+                db.refresh(customer)
+            
+            # Create order
+            new_order = Order(
+                customer_id=customer.id,
+                total_price=request.total_amount,
+                status="confirmed"
+            )
+            db.add(new_order)
+            db.commit()
+            db.refresh(new_order)
+            
+            # Create order items
+            for item in request.items:
+                order_item = OrderItem(
+                    order_id=new_order.id,
+                    item_name=item.get("name", "Unknown Item"),
+                    quantity=item.get("quantity", 1),
+                    price=item.get("price", 0)
+                )
+                db.add(order_item)
+            
+            db.commit()
+            db_order_id = new_order.id
+            print(f"💾 [POS SYNC] Saved order {new_order.id} for customer {clean_phone}")
+    
     ticket = {
         "kitchen_ticket_id": f"KOT-{__import__('uuid').uuid4().hex[:6].upper()}",
         "type": request.order_type,
         "items": request.items,
-        "notes": request.instructions
+        "notes": request.instructions,
+        "db_order_id": db_order_id
     }
     print(f"🎫 [KOT GENERATED]: {ticket}")
-    return {"status": "success", "ticket": ticket}
+    return {"status": "success", "ticket": ticket, "db_order_id": db_order_id}
 
 # ── Voice Ordering Flow Endpoints ─────────────────────────────────────────
 
@@ -214,6 +714,7 @@ class VoiceAddressRequest(BaseModel):
 class VoiceFinalRequest(BaseModel):
     cart: list[dict]
     address: dict
+    phone_number: str  # Add phone number for customer identification
     language: str = "en-IN"
 
 @app.post("/voice/confirm")
@@ -316,21 +817,59 @@ def voice_address(request: VoiceAddressRequest):
     }
 
 @app.post("/voice/final-confirm")
-def voice_final_confirm(request: VoiceFinalRequest):
-    """Process the final order via existing order system."""
+def voice_final_confirm(request: VoiceFinalRequest, db: Session = Depends(get_db)):
+    """Process the final order and save to database."""
     import uuid
     
-    order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+    # Clean and validate phone number
+    clean_phone = re.sub(r'[^\d+]', '', request.phone_number)
+    phone_pattern = r'^[+]?[\d]{10,15}$'
+    if not re.match(phone_pattern, clean_phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
     
-    # Build order summary
+    # Find or create customer
+    customer = db.query(Customer).filter(Customer.phone_number == clean_phone).first()
+    if not customer:
+        customer = Customer(phone_number=clean_phone)
+        db.add(customer)
+        db.commit()
+        db.refresh(customer)
+    
+    # Calculate total
     total = sum(item.get("price", 0) * item.get("quantity", 1) for item in request.cart)
     
+    # Create order
+    new_order = Order(
+        customer_id=customer.id,
+        total_price=total,
+        status="confirmed"
+    )
+    db.add(new_order)
+    db.commit()
+    db.refresh(new_order)
+    
+    # Create order items
+    for item in request.cart:
+        order_item = OrderItem(
+            order_id=new_order.id,
+            item_name=item.get("name", "Unknown Item"),
+            quantity=item.get("quantity", 1),
+            price=item.get("price", 0)
+        )
+        db.add(order_item)
+    
+    db.commit()
+    
+    order_id = f"ORD-{new_order.id:06d}"
+    
     print(f"🎉 [FinalConfirm] Order {order_id} placed! ₹{total}")
-    print(f"📍 [FinalConfirm] Delivery: {request.address.get('display_name', 'N/A')}")
+    print(f"� [FinalConfirm] Customer: {customer.phone_number}")
+    print(f"�📍 [FinalConfirm] Delivery: {request.address.get('display_name', 'N/A')}")
     
     return {
         "confirmed": True,
         "order_id": order_id,
+        "customer_id": customer.id,
         "total": total,
         "delivery_address": request.address,
         "reply": f"Your order {order_id} has been placed successfully! Total: ₹{total}. We'll deliver to {request.address.get('area', 'your address')}.",
