@@ -456,15 +456,10 @@ Contributions are welcome! Please open an issue first to discuss what you'd like
 
 ---
 
-## 📄 License
-
-This project is open source. See [LICENSE](LICENSE) for details.
 
 ---
 
 <div align="center">
-
-Built with ❤️ by [**THE CHAOTICERS**](https://github.com/dtnotdt)
 
 <sub>AI Voice Food Ordering System — Where every language gets heard.</sub>
 
